@@ -134,42 +134,19 @@ async def start_mini_app_server():
     app.router.add_get('/api/data', handle_api_data)
     app.router.add_get('/api/stock', handle_api_stock)
     app.router.add_get('/api/performance', handle_api_performance)
-    
-    # Yeni Grafik Endpoint'i: TradingView kısıtlamalarını aşmak için
-    async def handle_chart(request):
-        symbol = request.query.get("symbol", "THYAO")
-        html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <style>body, html {{ margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #151924; }}</style>
-</head>
-<body>
-    <div class="tradingview-widget-container" style="height:100%;width:100%;">
-      <div id="tv_chart" style="height:100%;width:100%;"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-      <script type="text/javascript">
-      new TradingView.widget({{
-          "autosize": true,
-          "symbol": "BIST:{symbol}",
-          "interval": "D",
-          "timezone": "Europe/Istanbul",
-          "theme": "dark",
-          "style": "1",
-          "locale": "tr",
-          "enable_publishing": false,
-          "hide_top_toolbar": true,
-          "hide_legend": true,
-          "save_image": false,
-          "container_id": "tv_chart"
-      }});
-      </script>
-    </div>
-</body>
-</html>"""
-        return web.Response(text=html, content_type='text/html')
+    # Yeni Grafik Verisi Endpoint'i (Zaman dilimli: 1G, 1H, 1A, 3A, 1Y)
+    async def handle_api_chart(request):
+        symbol = request.query.get('symbol', 'THYAO')
+        period = request.query.get('period', '1A')
         
-    app.router.add_get('/chart', handle_chart)
+        try:
+            from sensors.fundamental_sensor import get_chart_data
+            data = await asyncio.to_thread(get_chart_data, symbol, period)
+            return web.json_response(data)
+        except Exception as e:
+            return web.json_response({"data": [], "labels": []})
+            
+    app.router.add_get('/api/chart', handle_api_chart)
     
     runner = web.AppRunner(app)
     await runner.setup()

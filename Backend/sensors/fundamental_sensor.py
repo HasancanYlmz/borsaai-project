@@ -56,3 +56,51 @@ def get_stock_fundamentals(symbol: str) -> Dict:
             "inst_holdings_pct": 0.0, "volume_spike": 1.0, "upside_potential": 0.0,
             "chart_data": [], "chart_labels": []
         }
+
+def get_chart_data(symbol: str, period_code: str) -> dict:
+    """
+    Kullanicinin sectigi zaman dilimine gore (1G, 1H, 1A, 3A, 1Y) grafik verisi dondurur.
+    """
+    yf_symbol = f"{symbol}.IS"
+    try:
+        ticker = yf.Ticker(yf_symbol)
+        
+        # Varsayılan (1 Ay)
+        period = "1mo"
+        interval = "1d"
+        
+        if period_code == "1G":
+            period = "1d"
+            interval = "15m" # 15 dakikalık mumlar (Günlük detay)
+        elif period_code == "1H":
+            period = "5d"
+            interval = "1h"  # Saatlik mumlar
+        elif period_code == "3A":
+            period = "3mo"
+            interval = "1d"
+        elif period_code == "1Y":
+            period = "1y"
+            interval = "1wk" # 1 yıl için haftalık mumlar daha temiz görünür
+            
+        hist = ticker.history(period=period, interval=interval)
+        chart_data = []
+        chart_labels = []
+        
+        if not hist.empty:
+            chart_data = [round(float(x), 2) for x in hist["Close"].tolist()]
+            
+            for d in hist.index:
+                if period_code in ["1G", "1H"]:
+                    # Saat bazli gosterim
+                    chart_labels.append(d.strftime("%H:%M"))
+                else:
+                    months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+                    if period_code == "1Y":
+                        chart_labels.append(f"{months[d.month-1]} '{str(d.year)[2:]}")
+                    else:
+                        chart_labels.append(f"{d.day} {months[d.month-1]}")
+                        
+        return {"data": chart_data, "labels": chart_labels}
+    except Exception as e:
+        log_event("ERROR", f"YFinance Grafik Hatasi ({symbol} - {period_code}): {e}", level="ERROR")
+        return {"data": [], "labels": []}
