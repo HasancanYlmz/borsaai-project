@@ -3,274 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Borsa AI Kontrol Merkezi</title>
-    
-    <!-- Telegram Web App Script -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
+    <title>BorsaAI Terminal</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        :root {
-            --bg-color: var(--tg-theme-bg-color, #0f172a);
-            --text-color: var(--tg-theme-text-color, #f8fafc);
-            --hint-color: var(--tg-theme-hint-color, #94a3b8);
-            --btn-color: var(--tg-theme-button-color, #3b82f6);
-            --btn-text: var(--tg-theme-button-text-color, #ffffff);
-        }
-        
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 16px;
-            padding-bottom: 30px;
-        }
-
-        /* Glassmorphism Wallet Card */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.2s ease;
-        }
-        
-        /* Pulse Animation on Update */
-        @keyframes pulse-glow {
-            0% { text-shadow: 0 0 0px rgba(59, 130, 246, 0); }
-            50% { text-shadow: 0 0 15px rgba(59, 130, 246, 0.8); }
-            100% { text-shadow: 0 0 0px rgba(59, 130, 246, 0); }
-        }
-        .pulse { animation: pulse-glow 1.5s ease-out; }
-
-        .standard-card {
-            background-color: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-
-        /* Spinner */
-        .loader {
-            border: 3px solid rgba(255,255,255,0.1);
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border-left-color: var(--btn-color);
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .signal-buy { border-left: 4px solid #22c55e; }
-        .signal-sell { border-left: 4px solid #ef4444; }
-        .signal-hold { border-left: 4px solid #64748b; }
-    </style>
-</head>
-<body>
-    
-    <!-- HEADER -->
-    <div class="flex items-center justify-between mb-6 px-2">
-        <div>
-            <h1 class="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Borsa AI</h1>
-            <p class="text-sm" style="color: var(--hint-color);">Deneysel Portföy Yönetimi</p>
-        </div>
-        <div id="loading" class="loader hidden"></div>
-    </div>
-
-    <!-- GLASS WALLET CARD -->
-    <div class="glass-card text-center mb-6">
-        <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-20"></div>
-        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500 rounded-full mix-blend-screen filter blur-3xl opacity-20"></div>
-        
-        <p class="text-xs uppercase tracking-widest font-bold mb-1 opacity-70">Toplam Özvarlık</p>
-        <h2 id="total-equity" class="text-4xl font-black mb-1">₺0.00</h2>
-        <p id="profit-badge" class="text-sm font-semibold mb-6 text-green-400">+0.00%</p>
-        
-        <div class="flex justify-between items-center px-4 border-t border-white/10 pt-4 mt-2">
-            <div class="text-left">
-                <p class="text-xs opacity-60">Nakit Bakiye</p>
-                <p id="cash-balance" class="font-bold text-lg">₺0.00</p>
-            </div>
-            <div class="text-right">
-                <p class="text-xs opacity-60">Hisse Değeri</p>
-                <p id="stock-value" class="font-bold text-lg">₺0.00</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- PIE CHART -->
-    <div class="standard-card flex flex-col items-center">
-        <h3 class="text-sm font-bold mb-2 opacity-80 w-full text-left">Varlık Dağılımı</h3>
-        <div class="relative w-48 h-48">
-            <canvas id="portfolioChart"></canvas>
-        </div>
-    </div>
-
-    <!-- ACTIVE TRADES -->
-    <h3 class="text-sm font-bold mt-6 mb-3 ml-2 opacity-80">📈 AKTİF HİSSELER</h3>
-    <div id="trades-container">
-        <div class="text-center text-sm opacity-60 py-4">Veriler çekiliyor...</div>
-    </div>
-
-    <!-- AI SIGNALS FEED -->
-    <h3 class="text-sm font-bold mt-6 mb-3 ml-2 opacity-80">🧠 AI KOMİTE KARARLARI (CANLI)</h3>
-    <div id="signals-container" class="space-y-3">
-        <div class="text-center text-sm opacity-60 py-4">Veriler çekiliyor...</div>
-    </div>
-
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
-
-        let chartInstance = null;
-
-        function updateChart(cash, stocksValue) {
-            const ctx = document.getElementById('portfolioChart').getContext('2d');
-            
-            if (chartInstance) {
-                chartInstance.data.datasets[0].data = [cash, stocksValue];
-                chartInstance.update();
-                return;
-            }
-
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Nakit', 'Hisseler'],
-                    datasets: [{
-                        data: [cash, stocksValue],
-                        backgroundColor: ['#3b82f6', '#a855f7'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    cutout: '75%',
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0B0E14',
+                        card: '#151924',
+                        green: '#22c55e',
+                        red: '#ef4444',
+                        blue: '#3b82f6'
                     }
                 }
-            });
+            }
+        }
+    </script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0B0E14; color: #e2e8f0; }
+        .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #fff; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        /* Scrollbar Gizleme */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="antialiased h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="p-4 bg-card border-b border-gray-800 flex justify-between items-center sticky top-0 z-10">
+        <div>
+            <h1 class="text-xl font-bold text-white tracking-wide">Borsa<span class="text-blue">AI</span></h1>
+            <p class="text-xs text-gray-400">Algoritmik Terminal • 7/24 Aktif</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-green"></span>
+            </span>
+            <span class="text-xs text-gray-300">Sistem Online</span>
+        </div>
+    </header>
+
+    <!-- Main Balances -->
+    <section class="p-4 bg-card">
+        <p class="text-xs text-gray-400 mb-1">TOPLAM ÖZVARLIK</p>
+        <div class="flex items-baseline gap-2">
+            <h2 id="totalEquity" class="text-3xl font-bold text-white">₺0,00</h2>
+            <span id="pnlBadge" class="text-sm font-semibold text-green bg-green/10 px-2 py-0.5 rounded">+₺0,00 (+0.00%)</span>
+        </div>
+        <div class="flex justify-between mt-4 border-t border-gray-800 pt-3">
+            <div>
+                <p class="text-[10px] text-gray-500 uppercase">Nakit Bakiye</p>
+                <p id="cashBalance" class="text-sm font-semibold text-gray-200">₺0,00</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-gray-500 uppercase">Hisse Değeri</p>
+                <p id="stockValue" class="text-sm font-semibold text-gray-200">₺0,00</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex border-b border-gray-800 bg-card px-2 overflow-x-auto">
+        <button onclick="switchTab('ozet')" class="tab-btn active px-4 py-3 text-sm text-gray-400 whitespace-nowrap">ÖZET & GRAFİK</button>
+        <button onclick="switchTab('portfoy')" class="tab-btn px-4 py-3 text-sm text-gray-400 whitespace-nowrap">PORTFÖYÜM</button>
+        <button onclick="switchTab('sinyaller')" class="tab-btn px-4 py-3 text-sm text-gray-400 whitespace-nowrap">AI SİNYALLER</button>
+    </nav>
+
+    <!-- Content Area -->
+    <main class="flex-1 overflow-y-auto pb-6">
+        
+        <!-- ÖZET & GRAFİK TAB -->
+        <div id="tab-ozet" class="tab-content active p-4 space-y-4">
+            <!-- TradingView Widget -->
+            <div class="bg-card rounded-lg overflow-hidden border border-gray-800 h-72">
+                <!-- TradingView Widget BEGIN -->
+                <div class="tradingview-widget-container" style="height:100%;width:100%">
+                  <div id="tradingview_1" style="height:100%;width:100%"></div>
+                  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+                  <script type="text/javascript">
+                  new TradingView.widget(
+                  {
+                  "autosize": true,
+                  "symbol": "BIST:XU100",
+                  "interval": "D",
+                  "timezone": "Europe/Istanbul",
+                  "theme": "dark",
+                  "style": "1",
+                  "locale": "tr",
+                  "enable_publishing": false,
+                  "backgroundColor": "#151924",
+                  "gridColor": "#1f2937",
+                  "hide_top_toolbar": true,
+                  "hide_legend": true,
+                  "save_image": false,
+                  "container_id": "tradingview_1"
+                }
+                  );
+                  </script>
+                </div>
+                <!-- TradingView Widget END -->
+            </div>
+            
+            <div class="bg-blue/10 border border-blue/20 rounded-lg p-3">
+                <div class="flex gap-2 items-center mb-1">
+                    <svg class="w-4 h-4 text-blue" fill="none" stroke="currentColor" viewBox="0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <h3 class="text-sm font-semibold text-blue">AI Piyasa Yorumu</h3>
+                </div>
+                <p class="text-xs text-gray-300 leading-relaxed">
+                    Sistem 7/24 aktif olarak BIST hisselerini tarıyor. Yukarıdaki grafik şu anki genel piyasa yönünü (XU100) göstermektedir.
+                </p>
+            </div>
+        </div>
+
+        <!-- PORTFÖY TAB -->
+        <div id="tab-portfoy" class="tab-content p-4">
+            <h3 class="text-xs text-gray-500 uppercase mb-3 font-semibold">Aktif Pozisyonlar</h3>
+            <div id="portfolioList" class="space-y-3">
+                <!-- JavaScript ile Doldurulacak -->
+                <div class="text-center py-6 text-gray-500 text-sm">Portföy yükleniyor...</div>
+            </div>
+        </div>
+
+        <!-- SİNYALLER TAB -->
+        <div id="tab-sinyaller" class="tab-content p-4">
+            <h3 class="text-xs text-gray-500 uppercase mb-3 font-semibold">Son Yapay Zeka Kararları</h3>
+            <div id="signalsList" class="space-y-3">
+                <!-- JavaScript ile Doldurulacak -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const INITIAL_CASH = 10000.0; // Baslangic bakiyesi (PNL hesaplamak icin)
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return "";
+            const d = new Date(timestamp);
+            return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute:'2-digit' });
         }
 
         async function fetchData() {
-            const loader = document.getElementById('loading');
-            loader.classList.remove('hidden');
-            
             try {
                 const response = await fetch('/api/data');
                 const data = await response.json();
                 
-                // Formatters
-                const fmt = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' });
-                const stockValue = data.equity - data.cash;
+                // Ust Bakiye Alani
+                document.getElementById('totalEquity').innerText = formatMoney(data.equity);
+                document.getElementById('cashBalance').innerText = formatMoney(data.cash);
+                const stockVal = data.equity - data.cash;
+                document.getElementById('stockValue').innerText = formatMoney(stockVal);
+
+                // Kâr/Zarar Hesaplama
+                const pnl = data.equity - INITIAL_CASH;
+                const pnlPct = (pnl / INITIAL_CASH) * 100;
+                const badge = document.getElementById('pnlBadge');
                 
-                // Update Wallet Texts
-                const eqEl = document.getElementById('total-equity');
-                eqEl.innerHTML = fmt.format(data.equity);
-                
-                // Remove animation class and add again to re-trigger
-                eqEl.classList.remove('pulse');
-                void eqEl.offsetWidth; // Trigger reflow
-                eqEl.classList.add('pulse');
-                
-                document.getElementById('cash-balance').innerHTML = fmt.format(data.cash);
-                document.getElementById('stock-value').innerHTML = fmt.format(stockValue);
-                
-                // PnL Badge
-                const profit = data.equity - 10000;
-                const profitPct = (profit / 10000) * 100;
-                const badge = document.getElementById('profit-badge');
-                if (profit >= 0) {
-                    badge.innerHTML = `+${fmt.format(profit)} (+${profitPct.toFixed(2)}%)`;
-                    badge.className = 'text-sm font-semibold mb-6 text-green-400';
+                if (pnl >= 0) {
+                    badge.innerText = `+${formatMoney(pnl)} (+${pnlPct.toFixed(2)}%)`;
+                    badge.className = "text-sm font-semibold text-green bg-green/10 px-2 py-0.5 rounded";
                 } else {
-                    badge.innerHTML = `${fmt.format(profit)} (${profitPct.toFixed(2)}%)`;
-                    badge.className = 'text-sm font-semibold mb-6 text-red-400';
+                    badge.innerText = `${formatMoney(pnl)} (${pnlPct.toFixed(2)}%)`;
+                    badge.className = "text-sm font-semibold text-red bg-red/10 px-2 py-0.5 rounded";
                 }
 
-                updateChart(data.cash, stockValue);
-                
-                // Render Trades
-                const tradesContainer = document.getElementById('trades-container');
+                // Portfoy Listesi
+                const pList = document.getElementById('portfolioList');
                 if (data.trades.length === 0) {
-                    tradesContainer.innerHTML = '<div class="standard-card text-center text-sm opacity-70">Şu an hisse bulunmuyor. Fon nakitte.</div>';
+                    pList.innerHTML = `<div class="bg-card border border-gray-800 rounded p-4 text-center text-xs text-gray-500">Şu an açık pozisyon bulunmuyor.</div>`;
                 } else {
-                    tradesContainer.innerHTML = '';
-                    data.trades.forEach(trade => {
-                        const totalCost = trade.buy_price * trade.lot_amount;
-                        tradesContainer.innerHTML += `
-                        <div class="standard-card flex justify-between items-center">
+                    pList.innerHTML = data.trades.map(t => `
+                        <div class="bg-card border border-gray-800 rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-gray-800 transition">
                             <div>
-                                <h4 class="font-bold text-lg text-white">${trade.symbol}</h4>
-                                <p class="text-xs opacity-60">${trade.buy_time}</p>
+                                <h4 class="font-bold text-white text-base">${t.symbol}</h4>
+                                <p class="text-[11px] text-gray-400">${t.lot_amount} Lot • ${formatTime(t.buy_time)}</p>
                             </div>
                             <div class="text-right">
-                                <p class="font-bold text-blue-400">${fmt.format(totalCost)}</p>
-                                <p class="text-xs opacity-60">${trade.lot_amount} Lot @ ₺${trade.buy_price}</p>
+                                <p class="text-sm font-semibold text-white">Maliyet: ₺${t.buy_price.toFixed(2)}</p>
+                                <p class="text-[11px] text-gray-500">Piyasa Acilinca Guncellenecek</p>
                             </div>
-                        </div>`;
-                    });
+                        </div>
+                    `).join('');
                 }
 
-                // Render Signals
-                const sigContainer = document.getElementById('signals-container');
-                if (!data.signals || data.signals.length === 0) {
-                    sigContainer.innerHTML = '<div class="text-center text-sm opacity-70">Henüz karar üretilmedi.</div>';
+                // Sinyaller Listesi
+                const sList = document.getElementById('signalsList');
+                if (data.signals.length === 0) {
+                    sList.innerHTML = `<div class="text-center text-xs text-gray-500">Sinyal bekleniyor...</div>`;
                 } else {
-                    sigContainer.innerHTML = '';
-                    data.signals.forEach(sig => {
-                        let borderColor = 'signal-hold';
-                        let badgeColor = 'bg-slate-600';
-                        let label = 'TUT';
-                        
-                        if (sig.type === 'BUY') {
-                            borderColor = 'signal-buy';
-                            badgeColor = 'bg-green-600';
-                            label = 'AL';
-                        } else if (sig.type === 'SELL') {
-                            borderColor = 'signal-sell';
-                            badgeColor = 'bg-red-600';
-                            label = 'SAT';
-                        }
-
-                        sigContainer.innerHTML += `
-                        <div class="standard-card ${borderColor} p-3">
-                            <div class="flex justify-between items-center mb-1">
+                    sList.innerHTML = data.signals.map(s => {
+                        const isBuy = s.type === 'BUY';
+                        const colorClass = isBuy ? 'text-green border-green' : 'text-red border-red';
+                        const bgClass = isBuy ? 'bg-green/10' : 'bg-red/10';
+                        return `
+                        <div class="bg-card border border-gray-800 rounded-lg p-3">
+                            <div class="flex justify-between items-center mb-2">
                                 <div class="flex items-center gap-2">
-                                    <span class="font-black text-white">${sig.symbol}</span>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full ${badgeColor} text-white font-bold">${label}</span>
+                                    <span class="font-bold text-white">${s.symbol}</span>
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${colorClass} ${bgClass}">${s.type}</span>
                                 </div>
-                                <span class="text-xs opacity-50">${sig.timestamp.split(' ')[1]}</span>
+                                <span class="text-[10px] text-gray-500">${formatTime(s.timestamp)}</span>
                             </div>
-                            <p class="text-xs opacity-80 leading-relaxed mt-2">${sig.reason}</p>
-                        </div>`;
-                    });
+                            <p class="text-xs text-gray-400">${s.reason}</p>
+                        </div>
+                        `;
+                    }).join('');
                 }
-                
             } catch (error) {
-                console.error(error);
-            } finally {
-                loader.classList.add('hidden');
+                console.error("Veri cekme hatasi:", error);
             }
         }
 
+        // İlk Yukleme ve Otomatik Yenileme
         fetchData();
-        setInterval(fetchData, 30000); // 30s auto-refresh acts as a keep-alive for SSH tunnel!
+        setInterval(fetchData, 5000); // 5 saniyede bir guncelle
     </script>
 </body>
 </html>

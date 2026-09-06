@@ -37,8 +37,8 @@ def evaluate_stock_committee(symbol: str, payload: dict) -> Dict:
 
     tv_data = payload.get("tv_data", {})
     rvol_data = payload.get("rvol_data", {})
-    akd_data = payload.get("akd_data", {})
     news_data = payload.get("news_data", {})
+    fundamental = payload.get("fundamental_data", {})
 
     score = 0.0
     reasons = []
@@ -58,17 +58,18 @@ def evaluate_stock_committee(symbol: str, payload: dict) -> Dict:
     if momentum > 70:
         reasons.append(f"Guclu Hacim (RVOL: {rvol_data.get('rvol_score', '?')})")
 
-    # 3. DOMİNASYON (Köpekbalığı Oyu - %20 Etki)
-    verdict_norm = _normalize(akd_data.get("verdict", ""))
-    is_alim = any(k in verdict_norm for k in KURUMSAL_ALIM_KELIMELER)
-    is_spoofing = akd_data.get("is_spoofing_suspected", False)
-
-    if is_alim and not is_spoofing:
-        score += 20.0
-        reasons.append("Kurumsal Para Girisi")
-    if is_spoofing:
-        score -= 50.0
-        reasons.append("SPOOFING (Tuzak) Sphesi!")
+    # 3. YABANCI & KURUMSAL TAKAS (Temel Analiz Oyu - %20 Etki)
+    fundamental = payload.get("fundamental_data", {})
+    inst_pct = fundamental.get("inst_holdings_pct", 0)
+    vol_spike = fundamental.get("volume_spike", 1.0)
+    
+    if inst_pct > 25.0:
+        score += 15.0
+        reasons.append(f"Kurumsal/Yabanci Payi Yuksek (%{inst_pct:.1f})")
+        
+    if vol_spike > 1.5:
+        score += 10.0
+        reasons.append(f"Anormal Hacim Artisi (x{vol_spike:.1f})")
 
     # 4. TEMEL HABER (KAP Oyu - %10 Etki)
     sentiment_norm = _normalize(news_data.get("sentiment", ""))

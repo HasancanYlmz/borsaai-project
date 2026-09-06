@@ -14,7 +14,7 @@ from core.signal_generator import generate_signal
 
 from sensors.yahoo_finance import calculate_dynamic_rvol
 from sensors.tradingview_sensor import get_tv_analysis
-from sensors.telegram_reader import fetch_latest_akd
+from sensors.fundamental_sensor import get_stock_fundamentals
 from sensors.kap_scraper import get_kap_news
 from quant.dominance import detect_spoofing_and_dominance
 from agents.committee import evaluate_stock_committee
@@ -108,21 +108,20 @@ async def market_trader():
                 if not tv_data:
                     continue # Nöbetçi henüz veriyi çekmemişse atla
                 
-                # Anlık Gündüz Verilerini Çek (RVOL ve Telegram AKD)
+                # Anlık Gündüz Verilerini Çek (RVOL ve Kurumsal Veriler)
                 live_volume = tv_data.get("volume", 0)
-                # Network calls offloaded to thread
                 rvol_data = await asyncio.to_thread(calculate_dynamic_rvol, symbol, live_volume) 
                 if not rvol_data:
                     rvol_data = {"momentum_score": 0, "regime": "YATAY", "rvol_score": 0}
                     
-                raw_akd = await fetch_latest_akd(symbol) # Already async
-                akd_data = await asyncio.to_thread(detect_spoofing_and_dominance, raw_akd)
+                # YFinance üzerinden Kurumsal Takas Oranı ve Hacim Anomalisi (Eski Telegram AKD'si yerine)
+                fundamental_data = await asyncio.to_thread(get_stock_fundamentals, symbol)
                 
                 # Komiteye Gönder
                 payload = {
                     "tv_data": tv_data,
                     "rvol_data": rvol_data,
-                    "akd_data": akd_data,
+                    "fundamental_data": fundamental_data,
                     "news_data": news_data
                 }
                 
