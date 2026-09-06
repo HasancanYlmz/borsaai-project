@@ -242,14 +242,13 @@
         function openModal(symbol) {
             document.getElementById('modalSymbol').textContent = symbol;
             document.getElementById('loadingTxt').style.display = 'block';
+            document.getElementById('loadingTxt').textContent = 'Veriler çekiliyor...';
             document.getElementById('fundGrid').style.display = 'none';
             document.getElementById('newsSection').style.display = 'none';
             document.getElementById('stockModal').classList.add('open');
 
-            // TradingView iframe - doğrudan src değiştir
-            document.getElementById('tvFrame').src =
-                'https://s.tradingview.com/widgetembed/?symbol=BIST%3A' + symbol +
-                '&interval=D&hidesidetoolbar=1&hidetoptoolbar=1&theme=dark&style=1&locale=tr&timezone=Europe%2FIstanbul';
+            // TradingView iframe - kendi sunucumuz üzerinden çağırıyoruz (Apple hatasını çözer)
+            document.getElementById('tvFrame').src = '/chart?symbol=' + symbol;
 
             // Backend'den temel veri ve haberler
             fetch('/api/stock?symbol=' + symbol)
@@ -277,8 +276,8 @@
                     }
                     document.getElementById('newsSection').style.display = 'block';
                 })
-                .catch(function() {
-                    document.getElementById('loadingTxt').textContent = 'Veri çekilemedi.';
+                .catch(function(e) {
+                    document.getElementById('loadingTxt').textContent = 'Temel veriler geçici olarak alınamadı, ancak grafik güncel.';
                 });
         }
 
