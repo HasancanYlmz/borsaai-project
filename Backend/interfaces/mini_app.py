@@ -59,11 +59,35 @@ async def handle_api_data(request):
         log_event("MINI_APP", f"API Hatasi: {e}", level="ERROR")
         return web.json_response({"error": str(e)}, status=500)
 
+async def handle_api_stock(request):
+    """Return fundamental data and news for a specific stock."""
+    from sensors.fundamental_sensor import get_stock_fundamentals
+    from sensors.kap_scraper import get_kap_news
+    
+    symbol = request.query.get('symbol')
+    if not symbol:
+        return web.json_response({"error": "Symbol parameter is missing"}, status=400)
+        
+    try:
+        # Offload to threads if they are blocking, but these are fast enough for now
+        fund_data = await asyncio.to_thread(get_stock_fundamentals, symbol)
+        news_data = await asyncio.to_thread(get_kap_news, symbol)
+        
+        return web.json_response({
+            "symbol": symbol,
+            "fundamentals": fund_data,
+            "news": news_data
+        })
+    except Exception as e:
+        log_event("MINI_APP", f"Stock API Hatasi ({symbol}): {e}", level="ERROR")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def start_mini_app_server():
     """Start the Aiohttp web server on port 8080."""
     app = web.Application()
     app.router.add_get('/', handle_index)
     app.router.add_get('/api/data', handle_api_data)
+    app.router.add_get('/api/stock', handle_api_stock)
     
     runner = web.AppRunner(app)
     await runner.setup()
