@@ -4,390 +4,352 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BorsaAI Terminal</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- TradingView Script -->
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        dark: '#0B0E14',
-                        card: '#151924',
-                        green: '#22c55e',
-                        red: '#ef4444',
-                        blue: '#3b82f6',
-                        borderGray: '#1f2937'
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0B0E14; color: #e2e8f0; }
-        .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #fff; font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        ::-webkit-scrollbar { width: 0px; background: transparent; }
-        
-        /* Modal Animation */
-        #stockModal { transition: transform 0.3s ease-in-out; transform: translateY(100%); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0B0E14; color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        ::-webkit-scrollbar { width: 0; }
+
+        /* HEADER */
+        .header { padding: 14px 16px; background: #151924; border-bottom: 1px solid #1f2937; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .logo { font-size: 20px; font-weight: bold; color: #fff; }
+        .logo span { color: #3b82f6; }
+        .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9ca3af; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        /* TABS */
+        .tabs { display: flex; background: #151924; border-bottom: 1px solid #1f2937; flex-shrink: 0; overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 12px 8px; font-size: 12px; font-weight: 600; color: #6b7280; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+        .tab-btn.active { color: #fff; border-bottom-color: #3b82f6; }
+
+        /* CONTENT */
+        .main { flex: 1; overflow-y: auto; position: relative; }
+        .tab { display: none; padding: 16px; }
+        .tab.active { display: block; }
+
+        /* SEARCH */
+        .search-box { position: relative; margin-bottom: 14px; }
+        .search-box input { width: 100%; padding: 11px 14px 11px 38px; background: #151924; border: 1px solid #1f2937; border-radius: 10px; color: #fff; font-size: 14px; outline: none; }
+        .search-box input:focus { border-color: #3b82f6; }
+        .search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; }
+        .section-title { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+
+        /* STOCK GRID */
+        .stock-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 20px; }
+        .stock-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: border-color 0.2s; }
+        .stock-card:active { border-color: #3b82f6; background: #1e2433; }
+        .stock-card .sym { font-weight: 700; font-size: 14px; color: #fff; }
+        .stock-card .arrow { color: #6b7280; font-size: 16px; }
+
+        /* PORTFOLIO CARD */
+        .balance-card { background: #151924; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .balance-label { font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+        .balance-amount { font-size: 26px; font-weight: 700; color: #fff; }
+        .balance-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; margin-left: 8px; }
+        .badge-green { color: #22c55e; background: rgba(34,197,94,0.1); }
+        .badge-red { color: #ef4444; background: rgba(239,68,68,0.1); }
+        .balance-row { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1f2937; }
+        .balance-sub { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        .balance-val { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-top: 2px; }
+
+        /* POSITION CARD */
+        .pos-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .pos-card:active { background: #1e2433; }
+        .pos-sym { font-weight: 700; font-size: 16px; color: #fff; }
+        .pos-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .pos-price { font-weight: 700; font-size: 14px; color: #fff; text-align: right; }
+        .pos-pnl { font-size: 12px; font-weight: 600; text-align: right; margin-top: 2px; }
+        .text-green { color: #22c55e; }
+        .text-red { color: #ef4444; }
+        .text-blue { color: #3b82f6; }
+        .empty-msg { text-align: center; padding: 32px 16px; }
+        .empty-msg p { color: #6b7280; font-size: 14px; }
+        .empty-msg small { color: #374151; font-size: 12px; display: block; margin-top: 6px; }
+
+        /* SIGNAL CARD */
+        .sig-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; margin-bottom: 10px; cursor: pointer; }
+        .sig-card:active { background: #1e2433; }
+        .sig-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .sig-sym { font-weight: 700; color: #fff; }
+        .sig-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid; margin-left: 6px; }
+        .sig-badge.buy { color: #22c55e; border-color: #22c55e; background: rgba(34,197,94,0.1); }
+        .sig-badge.sell { color: #ef4444; border-color: #ef4444; background: rgba(239,68,68,0.1); }
+        .sig-badge.hold { color: #6b7280; border-color: #6b7280; }
+        .sig-time { font-size: 11px; color: #6b7280; }
+        .sig-reason { font-size: 11px; color: #9ca3af; line-height: 1.4; }
+
+        /* MODAL */
+        #stockModal { position: absolute; inset: 0; background: #0B0E14; z-index: 50; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s ease; }
         #stockModal.open { transform: translateY(0); }
+        .modal-header { padding: 14px 16px; background: #151924; border-bottom: 1px solid #1f2937; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .back-btn { background: #1f2937; border: none; color: #9ca3af; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+        .modal-sym { font-size: 20px; font-weight: 700; color: #fff; }
+        .modal-body { flex: 1; overflow-y: auto; padding: 16px; }
+
+        /* CHART */
+        .chart-box { border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; height: 260px; margin-bottom: 14px; background: #151924; }
+        .chart-box iframe { width: 100%; height: 100%; border: none; }
+
+        /* FUNDAMENTALS GRID */
+        .fund-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .fund-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; }
+        .fund-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .fund-val { font-size: 15px; font-weight: 700; color: #fff; }
+
+        /* NEWS */
+        .news-title { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; padding-bottom: 8px; border-bottom: 1px solid #1f2937; margin-bottom: 10px; }
+        .news-item { background: #0d111a; border: 1px solid #1f2937; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+        .news-text { font-size: 12px; color: #d1d5db; line-height: 1.4; }
+        .news-src { font-size: 10px; color: #6b7280; margin-top: 4px; }
+        .loading-txt { text-align: center; padding: 20px; color: #3b82f6; font-size: 13px; font-weight: 600; }
     </style>
 </head>
-<body class="antialiased h-screen flex flex-col overflow-hidden">
+<body>
 
-    <!-- Header -->
-    <header class="p-4 bg-card border-b border-gray-800 flex justify-between items-center z-10 shrink-0">
-        <div>
-            <h1 class="text-xl font-bold text-white tracking-wide">Borsa<span class="text-blue">AI</span></h1>
-        </div>
-        <div class="flex items-center gap-2">
-            <span class="relative flex h-3 w-3">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-3 w-3 bg-green"></span>
-            </span>
-            <span class="text-xs text-gray-300">Online</span>
-        </div>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="logo">Borsa<span>AI</span></div>
+        <div class="status"><div class="dot"></div>Online</div>
     </header>
 
-    <!-- Navigation Tabs -->
-    <nav class="flex border-b border-gray-800 bg-card px-2 overflow-x-auto shrink-0">
-        <button onclick="switchTab('piyasa')" class="tab-btn active px-4 py-3 text-sm text-gray-400 whitespace-nowrap">PİYASA & ARAMA</button>
-        <button onclick="switchTab('portfoy')" class="tab-btn px-4 py-3 text-sm text-gray-400 whitespace-nowrap">PORTFÖYÜM</button>
-        <button onclick="switchTab('sinyaller')" class="tab-btn px-4 py-3 text-sm text-gray-400 whitespace-nowrap">SİNYALLER</button>
-    </nav>
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('piyasa', this)">PİYASA</button>
+        <button class="tab-btn" onclick="switchTab('portfoy', this)">PORTFÖYÜM</button>
+        <button class="tab-btn" onclick="switchTab('sinyaller', this)">SİNYALLER</button>
+    </div>
 
-    <!-- Content Area -->
-    <main class="flex-1 overflow-y-auto relative">
-        
-        <!-- PİYASA & ARAMA TAB -->
-        <div id="tab-piyasa" class="tab-content active p-4 space-y-4">
-            <!-- Arama Çubuğu -->
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <svg class="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-                    </svg>
-                </div>
-                <input type="text" id="searchInput" onkeyup="filterStocks()" class="block w-full p-3 pl-10 text-sm text-white bg-card border border-gray-800 rounded-lg focus:ring-blue focus:border-blue placeholder-gray-500" placeholder="Hisse ara (Örn: THYAO, ASELS)...">
+    <!-- MAIN -->
+    <div class="main">
+
+        <!-- PİYASA TAB -->
+        <div id="tab-piyasa" class="tab active">
+            <div class="search-box">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+                <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)" oninput="filterStocks()">
             </div>
-
-            <h3 class="text-xs text-gray-500 uppercase font-semibold">Popüler Hisseler (BIST30)</h3>
-            
-            <!-- Hisse Listesi -->
-            <div id="stockList" class="grid grid-cols-2 gap-3 pb-6">
-                <!-- JavaScript ile Doldurulacak -->
+            <div class="section-title">Popüler Hisseler (BIST30)</div>
+            <div class="stock-grid" id="stockGrid">
+                <!-- BIST30 - Statik HTML (JS gerektirmez) -->
+                <div class="stock-card" onclick="openModal('AKBNK')"><span class="sym">AKBNK</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('ALARK')"><span class="sym">ALARK</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('ASELS')"><span class="sym">ASELS</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('ASTOR')"><span class="sym">ASTOR</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('BIMAS')"><span class="sym">BIMAS</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('BRSAN')"><span class="sym">BRSAN</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('DOAS')"><span class="sym">DOAS</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('EKGYO')"><span class="sym">EKGYO</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('ENKAI')"><span class="sym">ENKAI</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('EREGL')"><span class="sym">EREGL</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('FROTO')"><span class="sym">FROTO</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('GARAN')"><span class="sym">GARAN</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('GUBRF')"><span class="sym">GUBRF</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('HEKTS')"><span class="sym">HEKTS</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('ISCTR')"><span class="sym">ISCTR</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('KCHOL')"><span class="sym">KCHOL</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('KONTR')"><span class="sym">KONTR</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('KOZAL')"><span class="sym">KOZAL</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('KRDMD')"><span class="sym">KRDMD</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('ODAS')"><span class="sym">ODAS</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('OYAKC')"><span class="sym">OYAKC</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('PETKM')"><span class="sym">PETKM</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('PGSUS')"><span class="sym">PGSUS</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('SAHOL')"><span class="sym">SAHOL</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('SASA')"><span class="sym">SASA</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('SISE')"><span class="sym">SISE</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('TCELL')"><span class="sym">TCELL</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('THYAO')"><span class="sym">THYAO</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('TOASO')"><span class="sym">TOASO</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('TUPRS')"><span class="sym">TUPRS</span><span class="arrow">›</span></div>
+                <div class="stock-card" onclick="openModal('YKBNK')"><span class="sym">YKBNK</span><span class="arrow">›</span></div>
             </div>
         </div>
 
         <!-- PORTFÖY TAB -->
-        <div id="tab-portfoy" class="tab-content p-4">
-            <!-- Bakiye Özeti -->
-            <div class="bg-card border border-gray-800 rounded-lg p-4 mb-4">
-                <p class="text-xs text-gray-400 mb-1">SANAL KASA DURUMU (Başlangıç: ₺10.000)</p>
-                <div class="flex items-baseline gap-2">
-                    <h2 id="totalEquity" class="text-2xl font-bold text-white">₺0,00</h2>
-                    <span id="pnlBadge" class="text-xs font-semibold text-green bg-green/10 px-2 py-0.5 rounded">+₺0,00</span>
+        <div id="tab-portfoy" class="tab">
+            <div class="balance-card">
+                <div class="balance-label">Sanal Kasa (Başlangıç: ₺10.000)</div>
+                <div style="display:flex;align-items:baseline;gap:8px;">
+                    <div class="balance-amount" id="totalEquity">₺10.000</div>
+                    <span class="balance-badge badge-green" id="pnlBadge">+₺0,00</span>
                 </div>
-                <div class="flex justify-between mt-3 border-t border-gray-800 pt-3">
-                    <div>
-                        <p class="text-[10px] text-gray-500 uppercase">Nakit</p>
-                        <p id="cashBalance" class="text-sm font-semibold text-gray-200">₺0,00</p>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-[10px] text-gray-500 uppercase">Hisse Değeri</p>
-                        <p id="stockValue" class="text-sm font-semibold text-gray-200">₺0,00</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] text-gray-500 uppercase">Toplam K/Z</p>
-                        <p id="totalPnl" class="text-sm font-semibold text-green">₺0,00</p>
-                    </div>
+                <div class="balance-row">
+                    <div><div class="balance-sub">Nakit</div><div class="balance-val" id="cashBalance">₺10.000</div></div>
+                    <div><div class="balance-sub">Hisse Değeri</div><div class="balance-val" id="stockValue">₺0</div></div>
+                    <div style="text-align:right"><div class="balance-sub">Toplam K/Z</div><div class="balance-val text-green" id="totalPnl">₺0,00</div></div>
                 </div>
             </div>
-
-            <h3 class="text-xs text-gray-500 uppercase mb-3 font-semibold">Açık Pozisyonlar</h3>
-            <div id="portfolioList" class="space-y-3 pb-6">
-                <div class="text-center py-6 text-gray-500 text-sm">Yükleniyor...</div>
+            <div class="section-title">Açık Pozisyonlar</div>
+            <div id="portfolioList">
+                <div class="empty-msg"><p>Yükleniyor...</p></div>
             </div>
         </div>
 
         <!-- SİNYALLER TAB -->
-        <div id="tab-sinyaller" class="tab-content p-4">
-            <h3 class="text-xs text-gray-500 uppercase mb-3 font-semibold">Son Kararlar & Sinyaller</h3>
-            <div id="signalsList" class="space-y-3 pb-6">
-                <!-- JavaScript ile Doldurulacak -->
+        <div id="tab-sinyaller" class="tab">
+            <div class="section-title">Son AI Kararları</div>
+            <div id="signalsList">
+                <div class="empty-msg"><p>Sinyal bekleniyor...</p><small>Sistem piyasa saatlerinde aktif tarama yapar.</small></div>
             </div>
         </div>
-        
-    </main>
 
-    <!-- HİSSE DETAY MODALI (Tam Ekran Pop-up) -->
-    <div id="stockModal" class="absolute inset-0 bg-dark z-50 flex flex-col h-full w-full">
-        <!-- Modal Header -->
-        <div class="p-4 bg-card border-b border-gray-800 flex justify-between items-center shrink-0">
-            <div class="flex items-center gap-3">
-                <button onclick="closeModal()" class="text-gray-400 hover:text-white bg-gray-800 rounded p-1">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                </button>
-                <h2 id="modalSymbol" class="text-xl font-bold text-white tracking-wide">THYAO</h2>
+        <!-- HİSSE DETAY MODALI -->
+        <div id="stockModal">
+            <div class="modal-header">
+                <button class="back-btn" onclick="closeModal()">‹</button>
+                <div class="modal-sym" id="modalSymbol">-</div>
+            </div>
+            <div class="modal-body">
+                <div class="chart-box">
+                    <iframe id="tvFrame" src="" allowfullscreen></iframe>
+                </div>
+                <div id="loadingTxt" class="loading-txt">Veriler çekiliyor...</div>
+                <div class="fund-grid" id="fundGrid" style="display:none">
+                    <div class="fund-card"><div class="fund-label">F/K Oranı</div><div class="fund-val" id="fPE">-</div></div>
+                    <div class="fund-card"><div class="fund-label">PD/DD Oranı</div><div class="fund-val" id="fPB">-</div></div>
+                    <div class="fund-card"><div class="fund-label">Yabancı/Fon Takası</div><div class="fund-val text-blue" id="fInst">-%</div></div>
+                    <div class="fund-card"><div class="fund-label">Anlık Hacim</div><div class="fund-val" id="fVol">Normal</div></div>
+                </div>
+                <div id="newsSection" style="display:none">
+                    <div class="news-title">Son Haberler & KAP Bildirimleri</div>
+                    <div id="newsList"></div>
+                </div>
             </div>
         </div>
-        
-        <!-- Modal Content (Scrollable) -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-4">
-            
-            <!-- Canlı Grafik - doğrudan TradingView iframe -->
-            <div class="bg-card rounded-lg overflow-hidden border border-gray-800 h-72 w-full">
-                <iframe id="tv_iframe"
-                    src=""
-                    style="width:100%;height:100%;border:none;"
-                    allowtransparency="true"
-                    scrolling="no"
-                    allowfullscreen>
-                </iframe>
-            </div>
 
-            <!-- Temel Veriler Loading -->
-            <div id="modalLoading" class="text-center py-4 text-blue text-sm font-semibold hidden">
-                Veriler ve Haberler Çekiliyor...
-            </div>
-
-            <!-- Temel Veriler (Fundamentals) -->
-            <div id="modalFundamentals" class="grid grid-cols-2 gap-3 hidden">
-                <div class="bg-card border border-gray-800 p-3 rounded-lg">
-                    <p class="text-[10px] text-gray-500 uppercase">F/K Oranı</p>
-                    <p id="modPE" class="text-sm font-bold text-white">-</p>
-                </div>
-                <div class="bg-card border border-gray-800 p-3 rounded-lg">
-                    <p class="text-[10px] text-gray-500 uppercase">PD/DD Oranı</p>
-                    <p id="modPB" class="text-sm font-bold text-white">-</p>
-                </div>
-                <div class="bg-card border border-gray-800 p-3 rounded-lg">
-                    <p class="text-[10px] text-gray-500 uppercase">Yabancı/Fon Takası</p>
-                    <p id="modInst" class="text-sm font-bold text-blue">-%</p>
-                </div>
-                <div class="bg-card border border-gray-800 p-3 rounded-lg">
-                    <p class="text-[10px] text-gray-500 uppercase">Anlık Hacim</p>
-                    <p id="modVol" class="text-sm font-bold text-white">Normal</p>
-                </div>
-            </div>
-
-            <!-- KAP Haberleri -->
-            <div id="modalNewsSection" class="hidden">
-                <h3 class="text-xs text-gray-500 uppercase mb-3 font-semibold border-b border-gray-800 pb-2">Son KAP Haberleri</h3>
-                <div id="modalNewsList" class="space-y-2">
-                    <!-- Haberler buraya -->
-                </div>
-            </div>
-
-        </div>
     </div>
 
     <script>
-        const INITIAL_CASH = 10000.0;
-        const bist30 = [
-            "AKBNK", "ALARK", "ASELS", "ASTOR", "BIMAS", "BRSAN", "CWISE", "DOAS", "EKGYO", "ENKAI", 
-            "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR", "KCHOL", "KONTR", "KOZAA", "KOZAL", 
-            "KRDMD", "ODAS", "OYAKC", "PETKM", "PGSUS", "SAHOL", "SASA", "SISE", "TCELL", "THYAO", 
-            "TOASO", "TUPRS", "YKBNK"
-        ];
+        // --- TAB ---
+        function switchTab(id, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            btn.classList.add('active');
+        }
 
-        // Sayfa Yuklendiginde BIST30 Listesini Olustur
-        window.onload = () => {
-            const listDiv = document.getElementById('stockList');
-            listDiv.innerHTML = bist30.map(sym => `
-                <div class="stock-card bg-card border border-gray-800 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:border-blue transition" onclick="openStockDetail('${sym}')">
-                    <span class="font-bold text-white text-sm">${sym}</span>
-                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </div>
-            `).join('');
-            fetchData();
-        };
-
-        // Arama Filtresi
+        // --- ARAMA FİLTRESİ ---
         function filterStocks() {
-            const query = document.getElementById('searchInput').value.toUpperCase();
-            const cards = document.querySelectorAll('.stock-card');
-            cards.forEach(card => {
-                const symbol = card.querySelector('span').innerText;
-                card.style.display = symbol.includes(query) ? 'flex' : 'none';
+            var q = document.getElementById('searchInput').value.toUpperCase().trim();
+            var cards = document.querySelectorAll('#stockGrid .stock-card');
+            cards.forEach(function(card) {
+                var sym = card.querySelector('.sym').textContent;
+                card.style.display = (q === '' || sym.indexOf(q) !== -1) ? '' : 'none';
             });
         }
 
-        // Tab Degistirme
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            document.getElementById('tab-' + tabId).classList.add('active');
-        }
+        // --- MODAL ---
+        function openModal(symbol) {
+            document.getElementById('modalSymbol').textContent = symbol;
+            document.getElementById('loadingTxt').style.display = 'block';
+            document.getElementById('fundGrid').style.display = 'none';
+            document.getElementById('newsSection').style.display = 'none';
+            document.getElementById('stockModal').classList.add('open');
 
-        // --- HISSE DETAY MODALI (YENI) ---
-        async function openStockDetail(symbol) {
-            const modal = document.getElementById('stockModal');
-            document.getElementById('modalSymbol').innerText = symbol;
-            
-            // UI Sifirlama
-            document.getElementById('modalFundamentals').classList.add('hidden');
-            document.getElementById('modalNewsSection').classList.add('hidden');
-            document.getElementById('modalLoading').classList.remove('hidden');
-            
-            modal.classList.add('open');
+            // TradingView iframe - doğrudan src değiştir
+            document.getElementById('tvFrame').src =
+                'https://s.tradingview.com/widgetembed/?symbol=BIST%3A' + symbol +
+                '&interval=D&hidesidetoolbar=1&hidetoptoolbar=1&theme=dark&style=1&locale=tr&timezone=Europe%2FIstanbul';
 
-            // 1. TradingView - dogrudan iframe src degistir (cache sorunu yok, her zaman dogru sembol)
-            const iframe = document.getElementById('tv_iframe');
-            iframe.src = `https://s.tradingview.com/widgetembed/?frameElementId=tv_iframe&symbol=BIST%3A${symbol}&interval=D&hidesidetoolbar=1&hidetoptoolbar=1&symboledit=0&saveimage=0&toolbarbg=151924&studies=[]&theme=dark&style=1&timezone=Europe%2FIstanbul&withdateranges=1&showpopupbutton=0&locale=tr`;
+            // Backend'den temel veri ve haberler
+            fetch('/api/stock?symbol=' + symbol)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    document.getElementById('loadingTxt').style.display = 'none';
+                    var f = data.fundamentals || {};
+                    document.getElementById('fPE').textContent = f.pe_ratio > 0 ? f.pe_ratio.toFixed(2) : '-';
+                    document.getElementById('fPB').textContent = f.pb_ratio > 0 ? f.pb_ratio.toFixed(2) : '-';
+                    document.getElementById('fInst').textContent = '%' + (f.inst_holdings_pct || 0).toFixed(2);
+                    var vs = f.volume_spike || 1;
+                    var volEl = document.getElementById('fVol');
+                    if (vs > 1.5) { volEl.textContent = 'x' + vs.toFixed(1) + ' Yüksek'; volEl.className = 'fund-val text-green'; }
+                    else { volEl.textContent = 'Normal'; volEl.className = 'fund-val'; }
+                    document.getElementById('fundGrid').style.display = 'grid';
 
-            // 2. Temel Veri ve Haberleri Çek (Backend'den)
-            try {
-                const response = await fetch(`/api/stock?symbol=${symbol}`);
-                const data = await response.json();
-                
-                document.getElementById('modalLoading').classList.add('hidden');
-                
-                if(data.fundamentals) {
-                    document.getElementById('modPE').innerText = data.fundamentals.pe_ratio > 0 ? data.fundamentals.pe_ratio.toFixed(2) : '-';
-                    document.getElementById('modPB').innerText = data.fundamentals.pb_ratio > 0 ? data.fundamentals.pb_ratio.toFixed(2) : '-';
-                    document.getElementById('modInst').innerText = `%${data.fundamentals.inst_holdings_pct.toFixed(2)}`;
-                    
-                    const volSpike = data.fundamentals.volume_spike;
-                    const volEl = document.getElementById('modVol');
-                    if (volSpike > 1.5) { volEl.innerText = `x${volSpike.toFixed(1)} Yüksek`; volEl.className = "text-sm font-bold text-green"; }
-                    else { volEl.innerText = "Normal"; volEl.className = "text-sm font-bold text-gray-400"; }
-                    
-                    document.getElementById('modalFundamentals').classList.remove('hidden');
-                }
-
-                if(data.news && data.news.length > 0) {
-                    const newsList = document.getElementById('modalNewsList');
-                    newsList.innerHTML = data.news.map(n => `
-                        <div class="bg-gray-900/50 p-2 rounded border border-gray-800 text-xs">
-                            <p class="text-gray-300 font-semibold">${n}</p>
-                            <p class="text-[10px] text-gray-500 mt-1">KAP (Kamuyu Aydınlatma Platformu)</p>
-                        </div>
-                    `).join('');
-                    document.getElementById('modalNewsSection').classList.remove('hidden');
-                } else {
-                    const newsList = document.getElementById('modalNewsList');
-                    newsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-2">Son günlerde yeni bildirim bulunamadı.</p>`;
-                    document.getElementById('modalNewsSection').classList.remove('hidden');
-                }
-            } catch (err) {
-                console.error(err);
-                document.getElementById('modalLoading').innerText = "Veri çekilirken hata oluştu.";
-            }
+                    var news = data.news || [];
+                    var nl = document.getElementById('newsList');
+                    if (news.length > 0) {
+                        nl.innerHTML = news.map(function(n) {
+                            return '<div class="news-item"><div class="news-text">' + n + '</div><div class="news-src">KAP / Yahoo Finance</div></div>';
+                        }).join('');
+                    } else {
+                        nl.innerHTML = '<div class="news-item"><div class="news-text" style="color:#6b7280">Son günlerde bildirim bulunamadı.</div></div>';
+                    }
+                    document.getElementById('newsSection').style.display = 'block';
+                })
+                .catch(function() {
+                    document.getElementById('loadingTxt').textContent = 'Veri çekilemedi.';
+                });
         }
 
         function closeModal() {
             document.getElementById('stockModal').classList.remove('open');
-            // iframe src'yi bosalt ki bir sonraki acilista eski sembol gorunmesin
-            document.getElementById('tv_iframe').src = '';
+            document.getElementById('tvFrame').src = '';
         }
 
-        // --- GENEL PORTFOY VERILERI ---
-        function formatMoney(amount) {
-            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+        // --- PORTFÖY & SİNYAL VERİLERİ ---
+        function fmt(n) {
+            return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY'}).format(n);
         }
 
-        function formatTime(timestamp) {
-            if (!timestamp) return "";
-            const d = new Date(timestamp);
-        async function fetchData() {
-            try {
-                // 1. Genel bakiye
-                const baseResp = await fetch('/api/data');
-                const base = await baseResp.json();
-                
-                document.getElementById('cashBalance').innerText = formatMoney(base.cash);
-
-                // 2. Anlık K/Z (performance endpoint)
-                const perfResp = await fetch('/api/performance');
-                const perf = await perfResp.json();
-                
-                const positions = perf.positions || [];
-                const totalPnl = perf.total_pnl || 0;
-                
-                // Hisse toplam değeri
-                const stockVal = positions.reduce((sum, p) => sum + p.value, 0);
-                const totalEquity = base.cash + stockVal;
-                document.getElementById('totalEquity').innerText = formatMoney(totalEquity);
-                document.getElementById('stockValue').innerText = formatMoney(stockVal);
-                
-                // Başlangıçtan toplam K/Z
-                const pnl = totalEquity - 10000;
-                const pnlPct = (pnl / 10000) * 100;
-                const badge = document.getElementById('pnlBadge');
-                if (pnl >= 0) {
-                    badge.innerText = `+${formatMoney(pnl)} (+${pnlPct.toFixed(2)}%)`;
-                    badge.className = "text-xs font-semibold text-green bg-green/10 px-2 py-0.5 rounded";
-                } else {
-                    badge.innerText = `${formatMoney(pnl)} (${pnlPct.toFixed(2)}%)`;
-                    badge.className = "text-xs font-semibold text-red bg-red/10 px-2 py-0.5 rounded";
-                }
-
-                // Toplam K/Z
-                const pnlEl = document.getElementById('totalPnl');
-                pnlEl.innerText = formatMoney(totalPnl);
-                pnlEl.className = totalPnl >= 0 ? "text-sm font-semibold text-green" : "text-sm font-semibold text-red";
-
-                // Pozisyon Listesi (her biri için K/Z)
-                const pList = document.getElementById('portfolioList');
-                if (positions.length === 0) {
-                    pList.innerHTML = `<div class="bg-card border border-gray-800 rounded-lg p-6 text-center">
-                        <p class="text-gray-500 text-sm">Henüz açık pozisyon yok.</p>
-                        <p class="text-gray-600 text-xs mt-1">Yapay zeka AL sinyali verdiğinde buraya işlenecek.</p>
-                    </div>`;
-                } else {
-                    pList.innerHTML = positions.map(p => {
-                        const isProfit = p.pnl >= 0;
-                        const pnlColor = isProfit ? 'text-green' : 'text-red';
-                        const pnlSign = isProfit ? '+' : '';
-                        return `
-                        <div class="bg-card border border-gray-800 rounded-lg p-3 cursor-pointer hover:bg-gray-800 transition" onclick="openStockDetail('${p.symbol}')">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-bold text-white text-base">${p.symbol}</h4>
-                                    <p class="text-[11px] text-gray-400">${p.lot_amount} Lot • Alış: ₺${p.buy_price.toFixed(2)}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-bold text-white">₺${p.current_price.toFixed(2)}</p>
-                                    <p class="text-xs font-semibold ${pnlColor}">${pnlSign}₺${p.pnl.toFixed(2)} (${pnlSign}${p.pnl_pct.toFixed(2)}%)</p>
-                                </div>
-                            </div>
-                        </div>`;
+        function loadData() {
+            // Bakiye
+            fetch('/api/data').then(function(r){return r.json();}).then(function(d){
+                document.getElementById('cashBalance').textContent = fmt(d.cash);
+                // Sinyaller
+                var sl = document.getElementById('signalsList');
+                if (d.signals && d.signals.length > 0) {
+                    sl.innerHTML = d.signals.map(function(s) {
+                        var cls = s.type === 'BUY' ? 'buy' : (s.type === 'SELL' ? 'sell' : 'hold');
+                        return '<div class="sig-card" onclick="openModal(\'' + s.symbol + '\')">' +
+                            '<div class="sig-header"><div><span class="sig-sym">' + s.symbol + '</span>' +
+                            '<span class="sig-badge ' + cls + '">' + s.type + '</span></div>' +
+                            '<span class="sig-time">' + s.timestamp + '</span></div>' +
+                            '<div class="sig-reason">' + s.reason + '</div></div>';
                     }).join('');
                 }
+            }).catch(function(){});
 
-                // Sinyal Listesi
-                const sList = document.getElementById('signalsList');
-                if (base.signals.length === 0) {
-                    sList.innerHTML = `<div class="text-center text-xs text-gray-500 py-6">Sinyal bekleniyor... Sistem piyasa saatlerinde aktif.</div>`;
-                } else {
-                    sList.innerHTML = base.signals.map(s => {
-                        const isBuy = s.type === 'BUY';
-                        const colorClass = isBuy ? 'text-green border-green' : 'text-red border-red';
-                        const bgClass = isBuy ? 'bg-green/10' : 'bg-red/10';
-                        return `
-                        <div class="bg-card border border-gray-800 rounded-lg p-3 cursor-pointer hover:bg-gray-800 transition" onclick="openStockDetail('${s.symbol}')">
-                            <div class="flex justify-between items-center mb-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-bold text-white">${s.symbol}</span>
-                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${colorClass} ${bgClass}">${s.type}</span>
-                                </div>
-                                <span class="text-[10px] text-gray-500">${s.timestamp}</span>
-                            </div>
-                            <p class="text-[11px] text-gray-400 leading-tight">${s.reason}</p>
-                        </div>`;
-                    }).join('');
-                }
-            } catch (error) {
-                console.error("Veri hatası:", error);
-            }
+            // Performans (K/Z)
+            fetch('/api/performance').then(function(r){return r.json();}).then(function(d){
+                var positions = d.positions || [];
+                var totalPnl = d.total_pnl || 0;
+                var stockVal = positions.reduce(function(s,p){return s+p.value;}, 0);
+                var equity = parseFloat(document.getElementById('cashBalance').textContent.replace(/[^\d,]/g,'').replace(',','.')) || 0;
+
+                fetch('/api/data').then(function(r){return r.json();}).then(function(base){
+                    var total = base.cash + stockVal;
+                    document.getElementById('totalEquity').textContent = fmt(total);
+                    document.getElementById('stockValue').textContent = fmt(stockVal);
+                    var pnl = total - 10000;
+                    var pct = (pnl / 10000 * 100).toFixed(2);
+                    var badge = document.getElementById('pnlBadge');
+                    badge.textContent = (pnl >= 0 ? '+' : '') + fmt(pnl) + ' (' + (pnl>=0?'+':'') + pct + '%)';
+                    badge.className = 'balance-badge ' + (pnl >= 0 ? 'badge-green' : 'badge-red');
+                    var pnlEl = document.getElementById('totalPnl');
+                    pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + fmt(totalPnl);
+                    pnlEl.className = 'balance-val ' + (totalPnl >= 0 ? 'text-green' : 'text-red');
+
+                    var pl = document.getElementById('portfolioList');
+                    if (positions.length === 0) {
+                        pl.innerHTML = '<div class="empty-msg"><p>Henüz açık pozisyon yok.</p><small>AI AL sinyali verince otomatik işlenir.</small></div>';
+                    } else {
+                        pl.innerHTML = positions.map(function(p) {
+                            var sign = p.pnl >= 0 ? '+' : '';
+                            var cls = p.pnl >= 0 ? 'text-green' : 'text-red';
+                            return '<div class="pos-card" onclick="openModal(\'' + p.symbol + '\')">' +
+                                '<div><div class="pos-sym">' + p.symbol + '</div>' +
+                                '<div class="pos-sub">' + p.lot_amount + ' Lot · Alış ₺' + p.buy_price.toFixed(2) + '</div></div>' +
+                                '<div><div class="pos-price">₺' + p.current_price.toFixed(2) + '</div>' +
+                                '<div class="pos-pnl ' + cls + '">' + sign + '₺' + p.pnl.toFixed(2) + ' (' + sign + p.pnl_pct.toFixed(2) + '%)</div></div></div>';
+                        }).join('');
+                    }
+                });
+            }).catch(function(){});
         }
 
-        setInterval(fetchData, 15000); // 15 saniyede bir güncelle
+        loadData();
+        setInterval(loadData, 15000);
     </script>
 </body>
 </html>
