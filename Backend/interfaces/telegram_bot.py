@@ -39,9 +39,11 @@ def get_updates(offset=None):
         return []
         
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
-    params = {"timeout": 10, "offset": offset}
+    # Long-polling: sunucu 30 sn bekler, mesaj gelince aninda cevap verir
+    # Bu sayede mesajlar sırada beklemez, anında işlenir
+    params = {"timeout": 30, "offset": offset, "allowed_updates": ["message"]}
     try:
-        response = requests.get(url, params=params, timeout=12)
+        response = requests.get(url, params=params, timeout=35)
         if response.status_code == 200:
             return response.json().get("result", [])
     except Exception:
@@ -124,8 +126,36 @@ async def handle_command(chat_id: str, text: str):
         msg = "✅ <b>Sistem Aktif ve Calisiyor.</b>\nPiyasa saatleri icerisinde otomatik tarama ve islem yapiliyor."
         send_reply(chat_id, msg)
         
+    elif text.startswith("/canli"):
+        parts = text.strip().split()
+        if len(parts) < 2:
+            send_reply(chat_id, "Kullanim: /canli THYAO")
+            return
+        symbol = parts[1].upper()
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker(f"{symbol}.IS")
+            fi = ticker.fast_info
+            price = fi.get("last_price", 0)
+            prev_close = fi.get("previous_close", price)
+            change = price - prev_close
+            change_pct = (change / prev_close * 100) if prev_close else 0
+            volume = fi.get("last_volume", 0)
+            market_cap = fi.get("market_cap", 0)
+            direction = "+" if change >= 0 else ""
+            msg = (
+                f"<b>{symbol} Canli Veri</b>\n"
+                f"Fiyat: <code>{price:.2f} TL</code>\n"
+                f"Degisim: <code>{direction}{change:.2f} ({direction}{change_pct:.2f}%)</code>\n"
+                f"Hacim: <code>{volume:,}</code>\n"
+                f"Piyasa Degeri: <code>{market_cap:,.0f} TL</code>"
+            )
+        except Exception as e:
+            msg = f"{symbol} verisi alinamadi: {e}"
+        send_reply(chat_id, msg)
+        
     else:
-        send_reply(chat_id, "Bilinmeyen komut. Gecerli komutlar: /portfoy, /sinyaller, /durum")
+        send_reply(chat_id, "Bilinmeyen komut. Gecerli komutlar: /portfoy, /sinyaller, /durum, /canli HISSE")
 
 def send_reply(chat_id: str, text: str):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"

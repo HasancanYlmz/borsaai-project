@@ -86,24 +86,28 @@
         <div id="tab-portfoy" class="tab-content p-4">
             <!-- Bakiye Özeti -->
             <div class="bg-card border border-gray-800 rounded-lg p-4 mb-4">
-                <p class="text-xs text-gray-400 mb-1">TOPLAM ÖZVARLIK</p>
+                <p class="text-xs text-gray-400 mb-1">SANAL KASA DURUMU (Başlangıç: ₺10.000)</p>
                 <div class="flex items-baseline gap-2">
                     <h2 id="totalEquity" class="text-2xl font-bold text-white">₺0,00</h2>
                     <span id="pnlBadge" class="text-xs font-semibold text-green bg-green/10 px-2 py-0.5 rounded">+₺0,00</span>
                 </div>
                 <div class="flex justify-between mt-3 border-t border-gray-800 pt-3">
                     <div>
-                        <p class="text-[10px] text-gray-500 uppercase">Nakit Bakiye</p>
+                        <p class="text-[10px] text-gray-500 uppercase">Nakit</p>
                         <p id="cashBalance" class="text-sm font-semibold text-gray-200">₺0,00</p>
                     </div>
-                    <div class="text-right">
+                    <div class="text-center">
                         <p class="text-[10px] text-gray-500 uppercase">Hisse Değeri</p>
                         <p id="stockValue" class="text-sm font-semibold text-gray-200">₺0,00</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] text-gray-500 uppercase">Toplam K/Z</p>
+                        <p id="totalPnl" class="text-sm font-semibold text-green">₺0,00</p>
                     </div>
                 </div>
             </div>
 
-            <h3 class="text-xs text-gray-500 uppercase mb-3 font-semibold">Aktif Pozisyonlar</h3>
+            <h3 class="text-xs text-gray-500 uppercase mb-3 font-semibold">Açık Pozisyonlar</h3>
             <div id="portfolioList" class="space-y-3 pb-6">
                 <div class="text-center py-6 text-gray-500 text-sm">Yükleniyor...</div>
             </div>
@@ -134,9 +138,15 @@
         <!-- Modal Content (Scrollable) -->
         <div class="flex-1 overflow-y-auto p-4 space-y-4">
             
-            <!-- Canlı Grafik (TradingView) -->
-            <div class="bg-card rounded-lg overflow-hidden border border-gray-800 h-72 w-full" id="tv_widget_container">
-                <!-- TV Widget buraya enjekte edilecek -->
+            <!-- Canlı Grafik - doğrudan TradingView iframe -->
+            <div class="bg-card rounded-lg overflow-hidden border border-gray-800 h-72 w-full">
+                <iframe id="tv_iframe"
+                    src=""
+                    style="width:100%;height:100%;border:none;"
+                    allowtransparency="true"
+                    scrolling="no"
+                    allowfullscreen>
+                </iframe>
             </div>
 
             <!-- Temel Veriler Loading -->
@@ -226,32 +236,9 @@
             
             modal.classList.add('open');
 
-            // 1. TradingView Widget Yukle (Dinamik)
-            const container = document.getElementById('tv_widget_container');
-            container.innerHTML = ''; // Eski grafigi temizle
-            
-            const widgetDiv = document.createElement('div');
-            widgetDiv.id = 'tradingview_' + symbol;
-            widgetDiv.style.height = '100%';
-            widgetDiv.style.width = '100%';
-            container.appendChild(widgetDiv);
-
-            new TradingView.widget({
-                "autosize": true,
-                "symbol": "BIST:" + symbol,
-                "interval": "D",
-                "timezone": "Europe/Istanbul",
-                "theme": "dark",
-                "style": "1",
-                "locale": "tr",
-                "enable_publishing": false,
-                "backgroundColor": "#151924",
-                "gridColor": "#1f2937",
-                "hide_top_toolbar": true,
-                "hide_legend": true,
-                "save_image": false,
-                "container_id": widgetDiv.id
-            });
+            // 1. TradingView - dogrudan iframe src degistir (cache sorunu yok, her zaman dogru sembol)
+            const iframe = document.getElementById('tv_iframe');
+            iframe.src = `https://s.tradingview.com/widgetembed/?frameElementId=tv_iframe&symbol=BIST%3A${symbol}&interval=D&hidesidetoolbar=1&hidetoptoolbar=1&symboledit=0&saveimage=0&toolbarbg=151924&studies=[]&theme=dark&style=1&timezone=Europe%2FIstanbul&withdateranges=1&showpopupbutton=0&locale=tr`;
 
             // 2. Temel Veri ve Haberleri Çek (Backend'den)
             try {
@@ -295,8 +282,8 @@
 
         function closeModal() {
             document.getElementById('stockModal').classList.remove('open');
-            // Modali kapatinca grafigi tamamen sil ki bir sonraki acilista cache'de kalmasin
-            document.getElementById('tv_widget_container').innerHTML = '';
+            // iframe src'yi bosalt ki bir sonraki acilista eski sembol gorunmesin
+            document.getElementById('tv_iframe').src = '';
         }
 
         // --- GENEL PORTFOY VERILERI ---
@@ -307,23 +294,31 @@
         function formatTime(timestamp) {
             if (!timestamp) return "";
             const d = new Date(timestamp);
-            return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute:'2-digit' });
-        }
-
         async function fetchData() {
             try {
-                const response = await fetch('/api/data');
-                const data = await response.json();
+                // 1. Genel bakiye
+                const baseResp = await fetch('/api/data');
+                const base = await baseResp.json();
                 
-                document.getElementById('totalEquity').innerText = formatMoney(data.equity);
-                document.getElementById('cashBalance').innerText = formatMoney(data.cash);
-                const stockVal = data.equity - data.cash;
-                document.getElementById('stockValue').innerText = formatMoney(stockVal);
+                document.getElementById('cashBalance').innerText = formatMoney(base.cash);
 
-                const pnl = data.equity - INITIAL_CASH;
-                const pnlPct = (pnl / INITIAL_CASH) * 100;
-                const badge = document.getElementById('pnlBadge');
+                // 2. Anlık K/Z (performance endpoint)
+                const perfResp = await fetch('/api/performance');
+                const perf = await perfResp.json();
                 
+                const positions = perf.positions || [];
+                const totalPnl = perf.total_pnl || 0;
+                
+                // Hisse toplam değeri
+                const stockVal = positions.reduce((sum, p) => sum + p.value, 0);
+                const totalEquity = base.cash + stockVal;
+                document.getElementById('totalEquity').innerText = formatMoney(totalEquity);
+                document.getElementById('stockValue').innerText = formatMoney(stockVal);
+                
+                // Başlangıçtan toplam K/Z
+                const pnl = totalEquity - 10000;
+                const pnlPct = (pnl / 10000) * 100;
+                const badge = document.getElementById('pnlBadge');
                 if (pnl >= 0) {
                     badge.innerText = `+${formatMoney(pnl)} (+${pnlPct.toFixed(2)}%)`;
                     badge.className = "text-xs font-semibold text-green bg-green/10 px-2 py-0.5 rounded";
@@ -332,51 +327,67 @@
                     badge.className = "text-xs font-semibold text-red bg-red/10 px-2 py-0.5 rounded";
                 }
 
+                // Toplam K/Z
+                const pnlEl = document.getElementById('totalPnl');
+                pnlEl.innerText = formatMoney(totalPnl);
+                pnlEl.className = totalPnl >= 0 ? "text-sm font-semibold text-green" : "text-sm font-semibold text-red";
+
+                // Pozisyon Listesi (her biri için K/Z)
                 const pList = document.getElementById('portfolioList');
-                if (data.trades.length === 0) {
-                    pList.innerHTML = `<div class="bg-card border border-gray-800 rounded p-4 text-center text-xs text-gray-500">Şu an açık pozisyon bulunmuyor.</div>`;
+                if (positions.length === 0) {
+                    pList.innerHTML = `<div class="bg-card border border-gray-800 rounded-lg p-6 text-center">
+                        <p class="text-gray-500 text-sm">Henüz açık pozisyon yok.</p>
+                        <p class="text-gray-600 text-xs mt-1">Yapay zeka AL sinyali verdiğinde buraya işlenecek.</p>
+                    </div>`;
                 } else {
-                    pList.innerHTML = data.trades.map(t => `
-                        <div class="bg-card border border-gray-800 rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-gray-800 transition" onclick="openStockDetail('${t.symbol}')">
-                            <div>
-                                <h4 class="font-bold text-white text-base">${t.symbol}</h4>
-                                <p class="text-[11px] text-gray-400">${t.lot_amount} Lot • ${formatTime(t.buy_time)}</p>
+                    pList.innerHTML = positions.map(p => {
+                        const isProfit = p.pnl >= 0;
+                        const pnlColor = isProfit ? 'text-green' : 'text-red';
+                        const pnlSign = isProfit ? '+' : '';
+                        return `
+                        <div class="bg-card border border-gray-800 rounded-lg p-3 cursor-pointer hover:bg-gray-800 transition" onclick="openStockDetail('${p.symbol}')">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold text-white text-base">${p.symbol}</h4>
+                                    <p class="text-[11px] text-gray-400">${p.lot_amount} Lot • Alış: ₺${p.buy_price.toFixed(2)}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-bold text-white">₺${p.current_price.toFixed(2)}</p>
+                                    <p class="text-xs font-semibold ${pnlColor}">${pnlSign}₺${p.pnl.toFixed(2)} (${pnlSign}${p.pnl_pct.toFixed(2)}%)</p>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-sm font-semibold text-white">Maliyet: ₺${t.buy_price.toFixed(2)}</p>
-                            </div>
-                        </div>
-                    `).join('');
+                        </div>`;
+                    }).join('');
                 }
 
+                // Sinyal Listesi
                 const sList = document.getElementById('signalsList');
-                if (data.signals.length === 0) {
-                    sList.innerHTML = `<div class="text-center text-xs text-gray-500">Sinyal bekleniyor...</div>`;
+                if (base.signals.length === 0) {
+                    sList.innerHTML = `<div class="text-center text-xs text-gray-500 py-6">Sinyal bekleniyor... Sistem piyasa saatlerinde aktif.</div>`;
                 } else {
-                    sList.innerHTML = data.signals.map(s => {
+                    sList.innerHTML = base.signals.map(s => {
                         const isBuy = s.type === 'BUY';
                         const colorClass = isBuy ? 'text-green border-green' : 'text-red border-red';
                         const bgClass = isBuy ? 'bg-green/10' : 'bg-red/10';
                         return `
                         <div class="bg-card border border-gray-800 rounded-lg p-3 cursor-pointer hover:bg-gray-800 transition" onclick="openStockDetail('${s.symbol}')">
-                            <div class="flex justify-between items-center mb-2">
+                            <div class="flex justify-between items-center mb-1">
                                 <div class="flex items-center gap-2">
                                     <span class="font-bold text-white">${s.symbol}</span>
                                     <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${colorClass} ${bgClass}">${s.type}</span>
                                 </div>
-                                <span class="text-[10px] text-gray-500">${formatTime(s.timestamp)}</span>
+                                <span class="text-[10px] text-gray-500">${s.timestamp}</span>
                             </div>
                             <p class="text-[11px] text-gray-400 leading-tight">${s.reason}</p>
-                        </div>
-                        `;
+                        </div>`;
                     }).join('');
                 }
             } catch (error) {
-                console.error("Veri cekme hatasi:", error);
+                console.error("Veri hatası:", error);
             }
         }
 
-        setInterval(fetchData, 10000);
+        setInterval(fetchData, 15000); // 15 saniyede bir güncelle
     </script>
 </body>
 </html>

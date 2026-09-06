@@ -79,14 +79,9 @@ async def market_trader():
     while IS_RUNNING:
         try:
             now = get_ist_time()
-            is_market_open = True
-            
-            # Hafta sonu veya mesai dışı kontrolü
-            if now.weekday() >= 5 or not (dt_time(9, 55) <= now.time() <= dt_time(18, 10)):
-                is_market_open = False
-                
-            if not is_market_open:
-                # Piyasa kapalıysa uykuya geç
+            # Hafta sonu kontrolü (sadece hafta sonları uyur, hafta içi piyasa kapalı saatler dahil çalışır)
+            if now.weekday() >= 5:
+                log_event("TRADER", "Hafta sonu, trader 60 sn bekliyor.")
                 await asyncio.sleep(60)
                 continue
                 

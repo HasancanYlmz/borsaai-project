@@ -82,12 +82,58 @@ async def handle_api_stock(request):
         log_event("MINI_APP", f"Stock API Hatasi ({symbol}): {e}", level="ERROR")
         return web.json_response({"error": str(e)}, status=500)
 
+async def handle_api_performance(request):
+    """Her açık pozisyonun anlık kâr/zarar durumunu hesaplar ve döndürür."""
+    import yfinance as yf
+    try:
+        trades = get_active_trades()
+        results = []
+        total_pnl = 0.0
+        
+        for trade in trades:
+            symbol, buy_price, lot_amount, buy_time = trade
+            try:
+                # Anlık fiyatı yfinance'ten çek
+                ticker = yf.Ticker(f"{symbol}.IS")
+                current_price = ticker.fast_info.get("last_price") or ticker.info.get("currentPrice", 0)
+                if not current_price or current_price == 0:
+                    current_price = buy_price  # Fiyat çekilemezse maliyeti göster
+            except:
+                current_price = buy_price
+
+            cost = float(buy_price) * int(lot_amount)
+            value = float(current_price) * int(lot_amount)
+            pnl = value - cost
+            pnl_pct = (pnl / cost) * 100 if cost > 0 else 0
+            total_pnl += pnl
+
+            results.append({
+                "symbol": symbol,
+                "buy_price": float(buy_price),
+                "current_price": float(current_price),
+                "lot_amount": int(lot_amount),
+                "buy_time": buy_time,
+                "cost": cost,
+                "value": value,
+                "pnl": pnl,
+                "pnl_pct": pnl_pct
+            })
+
+        return web.json_response({
+            "positions": results,
+            "total_pnl": total_pnl
+        })
+    except Exception as e:
+        log_event("MINI_APP", f"Performance API Hatasi: {e}", level="ERROR")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def start_mini_app_server():
     """Start the Aiohttp web server on port 8080."""
     app = web.Application()
     app.router.add_get('/', handle_index)
     app.router.add_get('/api/data', handle_api_data)
     app.router.add_get('/api/stock', handle_api_stock)
+    app.router.add_get('/api/performance', handle_api_performance)
     
     runner = web.AppRunner(app)
     await runner.setup()
