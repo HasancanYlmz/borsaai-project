@@ -1,0 +1,11 @@
+# Git tarafından takip edilmeyecek dosyalar
+.env
+config/config.json
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.log
+Logs/
+*.bat
+.streamlit/
