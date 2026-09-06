@@ -18,10 +18,22 @@ def get_stock_fundamentals(symbol: str) -> Dict:
         market_cap = info.get("marketCap", 0)
         pe_ratio = info.get("trailingPE", 0)
         pb_ratio = info.get("priceToBook", 0)
-        inst_holdings = info.get("heldPercentInstitutions", 0.0)
-        avg_volume = info.get("averageVolume", 1)
-        current_volume = info.get("volume", 1)
-        volume_spike = (current_volume / avg_volume) if avg_volume > 0 else 1.0
+        inst_pct = info.get("institutionsPercentHeld", 0) * 100 if info.get("institutionsPercentHeld") else 0
+        
+        # Hacim anomalisi
+        vol = info.get("volume", 0)
+        avg_vol = info.get("averageVolume", 1)
+        vol_spike = (vol / avg_vol) if avg_vol else 1
+        
+        # Kendi Grafiğimiz için Son 1 Aylık Fiyat Verisi
+        hist = ticker.history(period="1mo")
+        chart_data = []
+        chart_labels = []
+        if not hist.empty:
+            chart_data = [round(float(x), 2) for x in hist["Close"].tolist()]
+            months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+            chart_labels = [f"{d.day} {months[d.month-1]}" for d in hist.index]
+        
         target_price = info.get("targetMeanPrice", 0)
         current_price = info.get("currentPrice", 0)
         upside_potential = ((target_price - current_price) / current_price) * 100 if current_price > 0 and target_price > 0 else 0

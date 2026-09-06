@@ -201,7 +201,7 @@
             </div>
             <div class="modal-body">
                 <div class="chart-box">
-                    <iframe id="tvFrame" src="" allowfullscreen></iframe>
+                    <canvas id="stockChart"></canvas>
                 </div>
                 <div id="loadingTxt" class="loading-txt">Veriler çekiliyor...</div>
                 <div class="fund-grid" id="fundGrid" style="display:none">
@@ -219,6 +219,8 @@
 
     </div>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // --- TAB ---
         function switchTab(id, btn) {
@@ -238,6 +240,46 @@
             });
         }
 
+        // --- GRAFİK ÇİZİCİ ---
+        let currentChart = null;
+        function renderChart(labels, data, symbol) {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            if (currentChart) { currentChart.destroy(); }
+            
+            // Eğer son fiyat ilk fiyattan büyükse yeşil, yoksa kırmızı
+            const isUp = data.length > 0 && data[data.length - 1] >= data[0];
+            const color = isUp ? '#22c55e' : '#ef4444';
+            const bgColor = isUp ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: symbol + ' Fiyat (₺)',
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: bgColor,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    interaction: { intersect: false, mode: 'index' },
+                    scales: {
+                        x: { display: true, ticks: { color: '#6b7280', maxTicksLimit: 6 }, grid: { display: false } },
+                        y: { display: true, ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, position: 'right' }
+                    }
+                }
+            });
+        }
+
         // --- MODAL ---
         function openModal(symbol) {
             document.getElementById('modalSymbol').textContent = symbol;
@@ -245,17 +287,27 @@
             document.getElementById('loadingTxt').textContent = 'Veriler çekiliyor...';
             document.getElementById('fundGrid').style.display = 'none';
             document.getElementById('newsSection').style.display = 'none';
+            
+            // Mevcut grafiği temizle
+            if (currentChart) { currentChart.destroy(); currentChart = null; }
             document.getElementById('stockModal').classList.add('open');
 
-            // TradingView iframe - kendi sunucumuz üzerinden çağırıyoruz (Apple hatasını çözer)
-            document.getElementById('tvFrame').src = '/chart?symbol=' + symbol;
-
-            // Backend'den temel veri ve haberler
+            // Backend'den kendi verilerimizi (Grafik + Temel) çekiyoruz
             fetch('/api/stock?symbol=' + symbol)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     document.getElementById('loadingTxt').style.display = 'none';
                     var f = data.fundamentals || {};
+                    
+                    // Grafiği Çiz
+                    if (f.chart_data && f.chart_data.length > 0) {
+                        renderChart(f.chart_labels, f.chart_data, symbol);
+                    } else {
+                        document.getElementById('loadingTxt').style.display = 'block';
+                        document.getElementById('loadingTxt').textContent = 'Grafik verisi alınamadı.';
+                    }
+
+                    // Temel Veriler
                     document.getElementById('fPE').textContent = f.pe_ratio > 0 ? f.pe_ratio.toFixed(2) : '-';
                     document.getElementById('fPB').textContent = f.pb_ratio > 0 ? f.pb_ratio.toFixed(2) : '-';
                     document.getElementById('fInst').textContent = '%' + (f.inst_holdings_pct || 0).toFixed(2);
@@ -277,13 +329,12 @@
                     document.getElementById('newsSection').style.display = 'block';
                 })
                 .catch(function(e) {
-                    document.getElementById('loadingTxt').textContent = 'Temel veriler geçici olarak alınamadı, ancak grafik güncel.';
+                    document.getElementById('loadingTxt').textContent = 'Sunucuyla bağlantı kurulamadı.';
                 });
         }
 
         function closeModal() {
             document.getElementById('stockModal').classList.remove('open');
-            document.getElementById('tvFrame').src = '';
         }
 
         // --- PORTFÖY & SİNYAL VERİLERİ ---
