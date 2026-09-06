@@ -6,6 +6,8 @@
     <title>BorsaAI Terminal</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- TradingView Script -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -275,10 +277,14 @@
                     const newsList = document.getElementById('modalNewsList');
                     newsList.innerHTML = data.news.map(n => `
                         <div class="bg-gray-900/50 p-2 rounded border border-gray-800 text-xs">
-                            <p class="text-gray-300">${n.title}</p>
-                            <p class="text-[10px] text-gray-500 mt-1">${new Date(n.date).toLocaleDateString('tr-TR')} • ${n.summary}</p>
+                            <p class="text-gray-300 font-semibold">${n}</p>
+                            <p class="text-[10px] text-gray-500 mt-1">KAP (Kamuyu Aydınlatma Platformu)</p>
                         </div>
                     `).join('');
+                    document.getElementById('modalNewsSection').classList.remove('hidden');
+                } else {
+                    const newsList = document.getElementById('modalNewsList');
+                    newsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-2">Son 24 saatte yeni haber yok.</p>`;
                     document.getElementById('modalNewsSection').classList.remove('hidden');
                 }
             } catch (err) {
