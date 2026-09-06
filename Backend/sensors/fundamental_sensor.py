@@ -100,17 +100,22 @@ def get_chart_data(symbol: str, period_code: str) -> dict:
                     else:
                         chart_labels.append(f"{d.day} {months[d.month-1]}")
             
-            # Kapanış Fiyatı Düzeltmesi:
-            # Gün içi verilerde son kapanış seansı (18:00-18:10) eksik kalabiliyor.
-            # Grafiğin ucu her zaman resmi kapanış fiyatına (fast_info.last_price) tam otursun.
-            try:
-                real_close = round(float(ticker.fast_info.get("last_price", chart_data[-1])), 2)
-                chart_data[-1] = real_close
-                if period_code == "1G" and chart_labels[-1] < "18:00":
-                    # Eger piyasa kapandiysa son etiketi Kapanis olarak belirle
-                    chart_labels[-1] = "Kapanış"
-            except:
-                pass
+            # Kapanış Fiyatı Senkronizasyonu (Kafa Karışıklığını Önlemek İçin):
+            # 1A, 3A, 1Y grafikleri günlük (1d) mum kullandığı için Borsa İstanbul'un resmi kapanışını (karanlık oda dahil) kusursuz verir (Örn: 71.85).
+            # 1G ve 1H grafikleri gün içi (5m, 1h) mum kullandığı için karanlık odayı göremez, 17:55'te takılı kalır (Örn: 71.70).
+            # Tüm grafiklerin son fiyatının birbiriyle %100 aynı olması için 1G ve 1H'nin son ucunu resmi gün sonu fiyatına eşitliyoruz.
+            if period_code in ["1G", "1H"] and len(chart_data) > 0:
+                try:
+                    daily_hist = ticker.history(period="1d", interval="1d")
+                    if not daily_hist.empty:
+                        official_close = round(float(daily_hist["Close"].iloc[-1]), 2)
+                        chart_data[-1] = official_close
+                        
+                        if period_code == "1G" and chart_labels[-1] < "18:00":
+                            # Eger piyasa kapandiysa son etiketi 17:55 yerine Kapanis olarak belirle
+                            chart_labels[-1] = "Kapanış"
+                except:
+                    pass
                         
         return {"data": chart_data, "labels": chart_labels}
     except Exception as e:
