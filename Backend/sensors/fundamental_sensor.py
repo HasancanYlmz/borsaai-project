@@ -43,13 +43,16 @@ def get_stock_fundamentals(symbol: str) -> Dict:
             "market_cap": market_cap,
             "pe_ratio": pe_ratio,
             "pb_ratio": pb_ratio,
-            "inst_holdings_pct": inst_holdings * 100 if inst_holdings else 0,
-            "volume_spike": volume_spike,
-            "upside_potential": upside_potential
+            "inst_holdings_pct": inst_pct,
+            "volume_spike": vol_spike,
+            "upside_potential": upside_potential,
+            "chart_data": chart_data,
+            "chart_labels": chart_labels
         }
     except Exception as e:
         log_event("ERROR", f"YFinance Veri Hatasi ({symbol}): {e}", level="ERROR")
         return {
             "symbol": symbol, "market_cap": 0, "pe_ratio": 0, "pb_ratio": 0,
-            "inst_holdings_pct": 0.0, "volume_spike": 1.0, "upside_potential": 0.0
+            "inst_holdings_pct": 0.0, "volume_spike": 1.0, "upside_potential": 0.0,
+            "chart_data": [], "chart_labels": []
         }
