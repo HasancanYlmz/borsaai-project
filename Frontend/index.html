@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Borsa AI Kontrol Merkezi</title>
+    
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #0f172a);
+            --text-color: var(--tg-theme-text-color, #f8fafc);
+            --hint-color: var(--tg-theme-hint-color, #94a3b8);
+            --btn-color: var(--tg-theme-button-color, #3b82f6);
+            --btn-text: var(--tg-theme-button-text-color, #ffffff);
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+            padding-bottom: 30px;
+        }
+
+        /* Glassmorphism Wallet Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+        
+        /* Pulse Animation on Update */
+        @keyframes pulse-glow {
+            0% { text-shadow: 0 0 0px rgba(59, 130, 246, 0); }
+            50% { text-shadow: 0 0 15px rgba(59, 130, 246, 0.8); }
+            100% { text-shadow: 0 0 0px rgba(59, 130, 246, 0); }
+        }
+        .pulse { animation: pulse-glow 1.5s ease-out; }
+
+        .standard-card {
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        /* Spinner */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border-left-color: var(--btn-color);
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .signal-buy { border-left: 4px solid #22c55e; }
+        .signal-sell { border-left: 4px solid #ef4444; }
+        .signal-hold { border-left: 4px solid #64748b; }
+    </style>
+</head>
+<body>
+    
+    <!-- HEADER -->
+    <div class="flex items-center justify-between mb-6 px-2">
+        <div>
+            <h1 class="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Borsa AI</h1>
+            <p class="text-sm" style="color: var(--hint-color);">Deneysel Portföy Yönetimi</p>
+        </div>
+        <div id="loading" class="loader hidden"></div>
+    </div>
+
+    <!-- GLASS WALLET CARD -->
+    <div class="glass-card text-center mb-6">
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-20"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500 rounded-full mix-blend-screen filter blur-3xl opacity-20"></div>
+        
+        <p class="text-xs uppercase tracking-widest font-bold mb-1 opacity-70">Toplam Özvarlık</p>
+        <h2 id="total-equity" class="text-4xl font-black mb-1">₺0.00</h2>
+        <p id="profit-badge" class="text-sm font-semibold mb-6 text-green-400">+0.00%</p>
+        
+        <div class="flex justify-between items-center px-4 border-t border-white/10 pt-4 mt-2">
+            <div class="text-left">
+                <p class="text-xs opacity-60">Nakit Bakiye</p>
+                <p id="cash-balance" class="font-bold text-lg">₺0.00</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs opacity-60">Hisse Değeri</p>
+                <p id="stock-value" class="font-bold text-lg">₺0.00</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIE CHART -->
+    <div class="standard-card flex flex-col items-center">
+        <h3 class="text-sm font-bold mb-2 opacity-80 w-full text-left">Varlık Dağılımı</h3>
+        <div class="relative w-48 h-48">
+            <canvas id="portfolioChart"></canvas>
+        </div>
+    </div>
+
+    <!-- ACTIVE TRADES -->
+    <h3 class="text-sm font-bold mt-6 mb-3 ml-2 opacity-80">📈 AKTİF HİSSELER</h3>
+    <div id="trades-container">
+        <div class="text-center text-sm opacity-60 py-4">Veriler çekiliyor...</div>
+    </div>
+
+    <!-- AI SIGNALS FEED -->
+    <h3 class="text-sm font-bold mt-6 mb-3 ml-2 opacity-80">🧠 AI KOMİTE KARARLARI (CANLI)</h3>
+    <div id="signals-container" class="space-y-3">
+        <div class="text-center text-sm opacity-60 py-4">Veriler çekiliyor...</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        let chartInstance = null;
+
+        function updateChart(cash, stocksValue) {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.data.datasets[0].data = [cash, stocksValue];
+                chartInstance.update();
+                return;
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Nakit', 'Hisseler'],
+                    datasets: [{
+                        data: [cash, stocksValue],
+                        backgroundColor: ['#3b82f6', '#a855f7'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    cutout: '75%',
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        async function fetchData() {
+            const loader = document.getElementById('loading');
+            loader.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                
+                // Formatters
+                const fmt = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' });
+                const stockValue = data.equity - data.cash;
+                
+                // Update Wallet Texts
+                const eqEl = document.getElementById('total-equity');
+                eqEl.innerHTML = fmt.format(data.equity);
+                
+                // Remove animation class and add again to re-trigger
+                eqEl.classList.remove('pulse');
+                void eqEl.offsetWidth; // Trigger reflow
+                eqEl.classList.add('pulse');
+                
+                document.getElementById('cash-balance').innerHTML = fmt.format(data.cash);
+                document.getElementById('stock-value').innerHTML = fmt.format(stockValue);
+                
+                // PnL Badge
+                const profit = data.equity - 10000;
+                const profitPct = (profit / 10000) * 100;
+                const badge = document.getElementById('profit-badge');
+                if (profit >= 0) {
+                    badge.innerHTML = `+${fmt.format(profit)} (+${profitPct.toFixed(2)}%)`;
+                    badge.className = 'text-sm font-semibold mb-6 text-green-400';
+                } else {
+                    badge.innerHTML = `${fmt.format(profit)} (${profitPct.toFixed(2)}%)`;
+                    badge.className = 'text-sm font-semibold mb-6 text-red-400';
+                }
+
+                updateChart(data.cash, stockValue);
+                
+                // Render Trades
+                const tradesContainer = document.getElementById('trades-container');
+                if (data.trades.length === 0) {
+                    tradesContainer.innerHTML = '<div class="standard-card text-center text-sm opacity-70">Şu an hisse bulunmuyor. Fon nakitte.</div>';
+                } else {
+                    tradesContainer.innerHTML = '';
+                    data.trades.forEach(trade => {
+                        const totalCost = trade.buy_price * trade.lot_amount;
+                        tradesContainer.innerHTML += `
+                        <div class="standard-card flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-lg text-white">${trade.symbol}</h4>
+                                <p class="text-xs opacity-60">${trade.buy_time}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-blue-400">${fmt.format(totalCost)}</p>
+                                <p class="text-xs opacity-60">${trade.lot_amount} Lot @ ₺${trade.buy_price}</p>
+                            </div>
+                        </div>`;
+                    });
+                }
+
+                // Render Signals
+                const sigContainer = document.getElementById('signals-container');
+                if (!data.signals || data.signals.length === 0) {
+                    sigContainer.innerHTML = '<div class="text-center text-sm opacity-70">Henüz karar üretilmedi.</div>';
+                } else {
+                    sigContainer.innerHTML = '';
+                    data.signals.forEach(sig => {
+                        let borderColor = 'signal-hold';
+                        let badgeColor = 'bg-slate-600';
+                        let label = 'TUT';
+                        
+                        if (sig.type === 'BUY') {
+                            borderColor = 'signal-buy';
+                            badgeColor = 'bg-green-600';
+                            label = 'AL';
+                        } else if (sig.type === 'SELL') {
+                            borderColor = 'signal-sell';
+                            badgeColor = 'bg-red-600';
+                            label = 'SAT';
+                        }
+
+                        sigContainer.innerHTML += `
+                        <div class="standard-card ${borderColor} p-3">
+                            <div class="flex justify-between items-center mb-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-black text-white">${sig.symbol}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full ${badgeColor} text-white font-bold">${label}</span>
+                                </div>
+                                <span class="text-xs opacity-50">${sig.timestamp.split(' ')[1]}</span>
+                            </div>
+                            <p class="text-xs opacity-80 leading-relaxed mt-2">${sig.reason}</p>
+                        </div>`;
+                    });
+                }
+                
+            } catch (error) {
+                console.error(error);
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        fetchData();
+        setInterval(fetchData, 30000); // 30s auto-refresh acts as a keep-alive for SSH tunnel!
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "api_keys": {
+    "gemini": "USE_ENV_VAR",
+    "telegram": "USE_ENV_VAR",
+    "telegram_bot_token": "USE_ENV_VAR",
+    "telegram_chat_id": "USE_ENV_VAR"
+  },
+  "trading": {
+    "symbols": [
+      "AKBNK", "ALARK", "ASELS", "ASTOR", "BIMAS", "BRSAN", "CWISE", "DOAS",
+      "EKGYO", "ENKAI", "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR",
+      "KCHOL", "KONTR", "KOZAA", "KOZAL", "KRDMD", "ODAS", "OYAKC", "PETKM",
+      "PGSUS", "SAHOL", "SASA", "SISE", "TCELL", "THYAO", "TOASO", "TUPRS",
+      "YKBNK"
+    ]
+  },
+  "logging": {
+    "level": "INFO",
+    "filename_pattern": "{date}_Borsa_Gunlugu.txt",
+    "max_bytes": 5242880,
+    "backup_count": 5
+  }
+}
