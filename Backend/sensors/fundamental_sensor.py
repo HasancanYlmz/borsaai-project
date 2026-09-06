@@ -71,7 +71,7 @@ def get_chart_data(symbol: str, period_code: str) -> dict:
         
         if period_code == "1G":
             period = "1d"
-            interval = "15m" # 15 dakikalık mumlar (Günlük detay)
+            interval = "5m" # 15 yerine 5 dakikalık daha akıcı ve detaylı mumlar
         elif period_code == "1H":
             period = "5d"
             interval = "1h"  # Saatlik mumlar
@@ -99,6 +99,18 @@ def get_chart_data(symbol: str, period_code: str) -> dict:
                         chart_labels.append(f"{months[d.month-1]} '{str(d.year)[2:]}")
                     else:
                         chart_labels.append(f"{d.day} {months[d.month-1]}")
+            
+            # Kapanış Fiyatı Düzeltmesi:
+            # Gün içi verilerde son kapanış seansı (18:00-18:10) eksik kalabiliyor.
+            # Grafiğin ucu her zaman resmi kapanış fiyatına (fast_info.last_price) tam otursun.
+            try:
+                real_close = round(float(ticker.fast_info.get("last_price", chart_data[-1])), 2)
+                chart_data[-1] = real_close
+                if period_code == "1G" and chart_labels[-1] < "18:00":
+                    # Eger piyasa kapandiysa son etiketi Kapanis olarak belirle
+                    chart_labels[-1] = "Kapanış"
+            except:
+                pass
                         
         return {"data": chart_data, "labels": chart_labels}
     except Exception as e:
