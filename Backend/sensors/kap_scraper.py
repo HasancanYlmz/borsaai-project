@@ -3,6 +3,7 @@ import time
 from typing import List
 import sys
 import os
+import xml.etree.ElementTree as ET
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from core.utils import log_event
@@ -26,41 +27,56 @@ def get_kap_news(symbol: str) -> List[str]:
             return cached_data
             
     try:
-        # KAP Genel Bildirimler API'si (Halka Açık)
-        url = "https://www.kap.org.tr/tr/api/disclosures"
-        response = requests.get(url, timeout=10)
+        news_list = []
+        # 1. KAP Genel Bildirimler API'si
+        try:
+            url = "https://www.kap.org.tr/tr/api/disclosures"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                for item in data:
+                    codes = item.get("stockCodes", "")
+                    if codes and symbol in codes:
+                        title = item.get("disclosureClass", "BİLDİRİM") + " - " + item.get("disclosureName", "")
+                        news_list.append(title)
+        except Exception as e:
+            log_event("WARNING", f"KAP API Yanıt Vermedi ({symbol}): {e}", level="WARNING")
         
-        if response.status_code == 200:
-            data = response.json()
-            news_list = []
-            
-            # API'den gelen devasa listeyi tara ve sadece bizim hissemizi bul
-            for item in data:
-                codes = item.get("stockCodes", "")
-                if codes and symbol in codes:
-                    title = item.get("disclosureClass", "BİLDİRİM") + " - " + item.get("disclosureName", "")
-                    news_list.append(title)
-            
-            # Eğer KAP'ta o gün haber yoksa, YFinance'in global/günlük haber ağını kontrol et
-            if not news_list:
-                import yfinance as yf
-                try:
-                    yf_news = yf.Ticker(f"{symbol}.IS").news
-                    for n in yf_news[:3]: # Son 3 haber
-                        title = n.get("title", "")
-                        if title:
-                            news_list.append(f"HABER - {title}")
-                except:
-                    pass
-            
-            log_event("KAP_SENSOR", f"{symbol} için {len(news_list)} adet haber bulundu.")
-            
-            # Sonucu hafızaya (Cache) mühürle
-            _KAP_CACHE[symbol] = (news_list, current_time)
-            return news_list
-            
-        return []
+        # 2. Eğer KAP'ta o gün haber yoksa, YFinance'in global/günlük haber ağını kontrol et
+        if not news_list:
+            import yfinance as yf
+            try:
+                yf_news = yf.Ticker(f"{symbol}.IS").news
+                for n in yf_news[:2]: # Son 2 haber
+                    title = n.get("title", "")
+                    if title:
+                        news_list.append(f"HABER - {title}")
+            except:
+                pass
+        
+        # 3. Google Haberler Entegrasyonu (Piyasa Dedikodusu ve Sondakika)
+        try:
+            gnews_url = f"https://news.google.com/rss/search?q={symbol}+hisse&hl=tr&gl=TR&ceid=TR:tr"
+            g_resp = requests.get(gnews_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
+            if g_resp.status_code == 200:
+                root = ET.fromstring(g_resp.content)
+                g_count = 0
+                for item in root.findall('.//item'):
+                    if g_count >= 3: # En taze 3 Google haberi
+                        break
+                    title = item.find('title').text
+                    if title:
+                        news_list.append(f"PİYASA SÖYLENTİSİ/HABER - {title}")
+                        g_count += 1
+        except Exception as e:
+            pass
+        
+        log_event("KAP_SENSOR", f"{symbol} için {len(news_list)} adet (KAP+Google+Yahoo) haber bulundu.")
+        
+        # Sonucu hafızaya (Cache) mühürle
+        _KAP_CACHE[symbol] = (news_list, current_time)
+        return news_list
         
     except Exception as e:
-        log_event("KAP_SENSOR", f"Haber Bağlantı Hatası ({symbol}): {e}", level="WARNING")
+        log_event("ERROR", f"Genel Haber Veri Hatasi ({symbol}): {e}", level="ERROR")
         return []
