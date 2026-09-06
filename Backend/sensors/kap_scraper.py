@@ -41,7 +41,19 @@ def get_kap_news(symbol: str) -> List[str]:
                     title = item.get("disclosureClass", "BİLDİRİM") + " - " + item.get("disclosureName", "")
                     news_list.append(title)
             
-            log_event("KAP_SENSOR", f"{symbol} için {len(news_list)} adet canlı KAP haberi bulundu.")
+            # Eğer KAP'ta o gün haber yoksa, YFinance'in global/günlük haber ağını kontrol et
+            if not news_list:
+                import yfinance as yf
+                try:
+                    yf_news = yf.Ticker(f"{symbol}.IS").news
+                    for n in yf_news[:3]: # Son 3 haber
+                        title = n.get("title", "")
+                        if title:
+                            news_list.append(f"HABER - {title}")
+                except:
+                    pass
+            
+            log_event("KAP_SENSOR", f"{symbol} için {len(news_list)} adet haber bulundu.")
             
             # Sonucu hafızaya (Cache) mühürle
             _KAP_CACHE[symbol] = (news_list, current_time)
@@ -50,5 +62,5 @@ def get_kap_news(symbol: str) -> List[str]:
         return []
         
     except Exception as e:
-        log_event("KAP_SENSOR", f"KAP Bağlantı Hatası ({symbol}): {e}", level="WARNING")
+        log_event("KAP_SENSOR", f"Haber Bağlantı Hatası ({symbol}): {e}", level="WARNING")
         return []

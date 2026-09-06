@@ -284,7 +284,7 @@
                     document.getElementById('modalNewsSection').classList.remove('hidden');
                 } else {
                     const newsList = document.getElementById('modalNewsList');
-                    newsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-2">Son 24 saatte yeni haber yok.</p>`;
+                    newsList.innerHTML = `<p class="text-xs text-gray-500 text-center py-2">Son günlerde yeni bildirim bulunamadı.</p>`;
                     document.getElementById('modalNewsSection').classList.remove('hidden');
                 }
             } catch (err) {
@@ -295,6 +295,8 @@
 
         function closeModal() {
             document.getElementById('stockModal').classList.remove('open');
+            // Modali kapatinca grafigi tamamen sil ki bir sonraki acilista cache'de kalmasin
+            document.getElementById('tv_widget_container').innerHTML = '';
         }
 
         // --- GENEL PORTFOY VERILERI ---
