@@ -129,13 +129,32 @@ async def market_trader():
                 if live_price_raw and live_price_raw > 0:
                     current_price = Decimal(str(live_price_raw))
                     
+                    # --- OTOMATİK KAR AL VE ZARAR KES (TP / SL) ---
+                    if symbol in active_symbols:
+                        full_trades = get_active_trades()
+                        for t in full_trades:
+                            if t[0] == symbol:
+                                buy_price = float(t[1])
+                                curr_price = float(current_price)
+                                pnl_pct = ((curr_price - buy_price) / buy_price) * 100
+                                
+                                # Hedef Kar (+%3) veya Zarar Kes (-%2)
+                                if pnl_pct >= 3.0:
+                                    sig.signal_type = SignalType.SELL
+                                    sig.reason = f"Otomatik KAR AL tetiklendi (+%{pnl_pct:.2f})"
+                                elif pnl_pct <= -2.0:
+                                    sig.signal_type = SignalType.SELL
+                                    sig.reason = f"Otomatik ZARAR KES tetiklendi (%{pnl_pct:.2f})"
+                                break
+                    # -----------------------------------------------
+                    
                     if sig.signal_type == SignalType.BUY and symbol not in active_symbols:
                         trade = execute_virtual_order(sig, portfolio, current_price, active_symbols)
                         if trade:
                             save_trade(trade.symbol, trade.buy_price, trade.lot_amount)
                             update_portfolio_cash(portfolio.cash_balance)
                             active_symbols.append(trade.symbol)
-                            await asyncio.to_thread(send_telegram_message, f"🟢 <b>ALIM YAPILDI:</b> {trade.symbol}\nFiyat: {trade.buy_price:.2f} TL\nLot: {trade.lot_amount}")
+                            await asyncio.to_thread(send_telegram_message, f"🟢 <b>ALIM YAPILDI:</b> {trade.symbol}\nFiyat: {trade.buy_price:.2f} TL\nLot: {trade.lot_amount}\nNeden: {sig.reason}")
                             
                     elif sig.signal_type == SignalType.SELL and symbol in active_symbols:
                         full_trades = get_active_trades()
@@ -145,7 +164,7 @@ async def market_trader():
                             update_portfolio_cash(portfolio.cash_balance)
                             active_symbols.remove(symbol)
                             durum = "KAR" if sell_result['pnl'] > 0 else "ZARAR"
-                            await asyncio.to_thread(send_telegram_message, f"🔴 <b>SATIS YAPILDI:</b> {symbol}\nSonuc: {sell_result['pnl']:.2f} TL {durum}")
+                            await asyncio.to_thread(send_telegram_message, f"🔴 <b>SATIS YAPILDI:</b> {symbol}\nSonuc: {sell_result['pnl']:.2f} TL {durum}\nNeden: {sig.reason}")
                             
                 await asyncio.sleep(2) # IP Ban koruması
                 
