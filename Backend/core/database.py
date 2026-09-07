@@ -4,6 +4,9 @@ import threading
 from datetime import datetime
 from typing import List, Tuple
 from decimal import Decimal
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from core.utils import get_ist_time_str
 
 # ---------------------------------------------------------
 # SYSTEM: DATABASE MANAGER (Thread-Safe)
@@ -58,7 +61,7 @@ def save_signal(symbol: str, signal_type: str, regime: str, confidence: float, r
         cursor = conn.cursor()
         cursor.execute(
             'INSERT INTO signals_history (timestamp, symbol, signal_type, regime, confidence_score, reason) VALUES (?, ?, ?, ?, ?, ?)',
-            (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), symbol, signal_type, regime, confidence, reason))
+            (get_ist_time_str(), symbol, signal_type, regime, confidence, reason))
         conn.commit()
         conn.close()
 
@@ -82,7 +85,7 @@ def save_trade(symbol: str, buy_price: Decimal, lot_amount: int):
         cursor = conn.cursor()
         cursor.execute(
             'INSERT OR REPLACE INTO active_trades (symbol, buy_price, lot_amount, buy_time) VALUES (?, ?, ?, ?)',
-            (symbol, float(buy_price), lot_amount, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+            (symbol, float(buy_price), lot_amount, get_ist_time_str()))
         conn.commit()
         conn.close()
 
