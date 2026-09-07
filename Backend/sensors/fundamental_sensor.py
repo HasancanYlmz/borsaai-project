@@ -111,9 +111,7 @@ def get_chart_data(symbol: str, period_code: str) -> dict:
                         official_close = round(float(daily_hist["Close"].iloc[-1]), 2)
                         chart_data[-1] = official_close
                         
-                        if period_code == "1G" and chart_labels[-1] < "18:00":
-                            # Eger piyasa kapandiysa son etiketi 17:55 yerine Kapanis olarak belirle
-                            chart_labels[-1] = "Kapanış"
+                        # Sadece fiyatı güncelliyoruz, etikete (saat) dokunmuyoruz. Kullanıcı orjinal saati görmek istiyor.
                 except:
                     pass
                         

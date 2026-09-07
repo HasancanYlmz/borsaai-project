@@ -237,6 +237,7 @@
     <script>
         // --- TAB ---
         function switchTab(id, btn) {
+            closeModal(); // Tab değiştiğinde açık olan detay penceresini kapat
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
