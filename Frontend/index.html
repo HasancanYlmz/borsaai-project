@@ -34,18 +34,22 @@
         .search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; }
         .section-title { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
 
-        /* STOCK GRID */
-        .stock-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 20px; }
-        .stock-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: border-color 0.2s; }
-        .stock-card:active { border-color: #3b82f6; background: #1e2433; }
-        .stock-card-left { display: flex; flex-direction: column; }
-        .stock-card .sym { font-weight: 700; font-size: 14px; color: #fff; }
-        .stock-card .sym-name { font-size: 10px; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
-        .stock-card-right { display: flex; flex-direction: column; align-items: flex-end; }
-        .stock-card .pct { font-size: 12px; font-weight: 700; }
-        .pct.up { color: #22c55e; }
-        .pct.down { color: #ef4444; }
-        .pct.flat { color: #6b7280; }
+        /* STOCK LIST (YATAY) */
+        .stock-grid { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
+        .stock-card { background: #151924; border: 1px solid #1f2937; border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background-color 0.2s; }
+        .stock-card:active { background: #1e2433; border-color: #3b82f6; }
+        .sc-left { display: flex; align-items: center; gap: 12px; }
+        .sc-logo { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #fff; }
+        .sc-info { display: flex; flex-direction: column; }
+        .sc-info .sym { font-weight: 700; font-size: 16px; color: #fff; }
+        .sc-info .sym-name { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        
+        .sc-right { display: flex; flex-direction: column; align-items: flex-end; }
+        .sc-price { font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 4px; }
+        .sc-pct { font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
+        .pct.up { color: #22c55e; background: rgba(34,197,94,0.1); }
+        .pct.down { color: #ef4444; background: rgba(239,68,68,0.1); }
+        .pct.flat { color: #6b7280; background: rgba(107,114,128,0.1); }
 
         /* PORTFOLIO CARD */
         .balance-card { background: #151924; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
@@ -234,64 +238,86 @@
             'YKBNK': 'Yapı Kredi'
         };
 
+        // --- LİSTE OLUŞTURUCU VE LOGO RENGİ ---
+        function getLogoColor(sym) {
+            const colors = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#3949ab', '#00897b', '#c0ca33', '#f4511e', '#5e35b1'];
+            return colors[sym.charCodeAt(0) % colors.length];
+        }
+
         function renderMarketGrid() {
             var grid = document.getElementById('stockGrid');
             var html = '';
             for (var sym in COMPANY_NAMES) {
                 var name = COMPANY_NAMES[sym];
-                // Başlangıçta yüzde 0 olarak gösteriyoruz, API'den gelince güncellenecek
+                var color = getLogoColor(sym);
+                var initialLetter = sym.substring(0, 2);
                 html += '<div class="stock-card" onclick="openModal(\'' + sym + '\')">' +
-                            '<div class="stock-card-left">' +
-                                '<span class="sym">' + sym + '</span>' +
-                                '<span class="sym-name">' + name + '</span>' +
+                            '<div class="sc-left">' +
+                                '<div class="sc-logo" style="background-color: ' + color + ';">' + initialLetter + '</div>' +
+                                '<div class="sc-info">' +
+                                    '<span class="sym">' + sym + '</span>' +
+                                    '<span class="sym-name">' + name + '</span>' +
+                                '</div>' +
                             '</div>' +
-                            '<div class="stock-card-right">' +
-                                '<span class="pct flat" id="pct-' + sym + '">%0.00</span>' +
+                            '<div class="sc-right">' +
+                                '<span class="sc-price" id="price-' + sym + '">- ₺</span>' +
+                                '<span class="sc-pct pct flat" id="pct-' + sym + '">%0.00</span>' +
                             '</div>' +
                         '</div>';
             }
             grid.innerHTML = html;
         }
-        
-        // Sayfa yüklenince ızgarayı çiz
+
+        // Arama Filtresi
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            var q = e.target.value.toLowerCase();
+            var cards = document.querySelectorAll('.stock-card');
+            cards.forEach(function(c) {
+                var txt = c.textContent.toLowerCase();
+                if (txt.indexOf(q) > -1) { c.style.display = 'flex'; }
+                else { c.style.display = 'none'; }
+            });
+        });
+
+        // Modal Kapatma
+        document.getElementById('stockModal').addEventListener('click', function(e) {
+            if (e.target === this) { closeModal(); }
+        });
+
+        // SAYFA YÜKLENDİĞİNDE
         renderMarketGrid();
 
-        // --- ARAMA FİLTRESİ ---
-        function filterStocks() {
-            var q = document.getElementById('searchInput').value.toUpperCase().trim();
-            var cards = document.querySelectorAll('#stockGrid .stock-card');
-            cards.forEach(function(card) {
-                var sym = card.querySelector('.sym').textContent.toUpperCase();
-                var name = card.querySelector('.sym-name').textContent.toUpperCase();
-                card.style.display = (q === '' || sym.indexOf(q) !== -1 || name.indexOf(q) !== -1) ? '' : 'none';
-            });
-        }
+        // HARİCİ TIKLAMALARDA MODAL KAPAT
+        window.addEventListener('click', function(e) {
+            if (e.target == document.getElementById('stockModal')) {
+                closeModal();
+            }
+        });
 
-        // --- GRAFİK ÇİZİCİ ---
-        let currentChart = null;
+        // GRAFİK ÇİZİCİ
+        var currentChart = null;
         function renderChart(labels, data, symbol) {
-            const ctx = document.getElementById('stockChart').getContext('2d');
+            var ctx = document.getElementById('stockChart').getContext('2d');
             if (currentChart) { currentChart.destroy(); }
             
-            // Eğer son fiyat ilk fiyattan büyükse yeşil, yoksa kırmızı
-            const isUp = data.length > 0 && data[data.length - 1] >= data[0];
-            const color = isUp ? '#22c55e' : '#ef4444';
-            const bgColor = isUp ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
+            var isUp = data[data.length-1] >= data[0];
+            var color = isUp ? '#22c55e' : '#ef4444';
+            var bg = isUp ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
 
             currentChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: symbol + ' Fiyat (₺)',
+                        label: symbol,
                         data: data,
                         borderColor: color,
-                        backgroundColor: bgColor,
+                        backgroundColor: bg,
                         borderWidth: 2,
                         fill: true,
-                        tension: 0.2,
                         pointRadius: 0,
-                        pointHoverRadius: 5
+                        pointHoverRadius: 4,
+                        tension: 0.1
                     }]
                 },
                 options: {
@@ -309,84 +335,42 @@
 
         // --- MODAL ---
         function fetchChartData(period) {
-            // Butonlari guncelle
             document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
-            
             var symbol = document.getElementById('modalSymbol').textContent;
-            
-            // Backend'den grafik verisini cek
             fetch('/api/chart?symbol=' + symbol + '&period=' + period)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    if (data.data && data.data.length > 0) {
-                        renderChart(data.labels, data.data, symbol);
-                    }
-                })
-                .catch(function(e) {
-                    console.error("Grafik cekilemedi:", e);
+                    if (data.data && data.data.length > 0) { renderChart(data.labels, data.data, symbol); }
                 });
         }
 
         function openModal(symbol) {
             document.getElementById('modalSymbol').textContent = symbol;
             document.getElementById('loadingTxt').style.display = 'block';
-            document.getElementById('loadingTxt').textContent = 'Veriler çekiliyor...';
             document.getElementById('fundGrid').style.display = 'none';
             document.getElementById('newsSection').style.display = 'none';
-            
-            // Zaman butonlarini sifirla (1A varsayilan)
             document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tf-btn')[2].classList.add('active'); // 1A
-            
-            // Mevcut grafiği temizle
+            document.querySelectorAll('.tf-btn')[2].classList.add('active');
             if (currentChart) { currentChart.destroy(); currentChart = null; }
             document.getElementById('stockModal').classList.add('open');
-
-            // Backend'den kendi verilerimizi (Grafik + Temel) çekiyoruz
             fetch('/api/stock?symbol=' + symbol)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     document.getElementById('loadingTxt').style.display = 'none';
                     var f = data.fundamentals || {};
-                    
-                    // Grafiği Çiz
-                    if (f.chart_data && f.chart_data.length > 0) {
-                        renderChart(f.chart_labels, f.chart_data, symbol);
-                    } else {
-                        document.getElementById('loadingTxt').style.display = 'block';
-                        document.getElementById('loadingTxt').textContent = 'Grafik verisi alınamadı.';
-                    }
-
-                    // Temel Veriler
+                    if (f.chart_data && f.chart_data.length > 0) { renderChart(f.chart_labels, f.chart_data, symbol); }
                     document.getElementById('fPE').textContent = f.pe_ratio > 0 ? f.pe_ratio.toFixed(2) : '-';
                     document.getElementById('fPB').textContent = f.pb_ratio > 0 ? f.pb_ratio.toFixed(2) : '-';
                     document.getElementById('fInst').textContent = '%' + (f.inst_holdings_pct || 0).toFixed(2);
-                    var vs = f.volume_spike || 1;
-                    var volEl = document.getElementById('fVol');
-                    if (vs > 1.5) { volEl.textContent = 'x' + vs.toFixed(1) + ' Yüksek'; volEl.className = 'fund-val text-green'; }
-                    else { volEl.textContent = 'Normal'; volEl.className = 'fund-val'; }
                     document.getElementById('fundGrid').style.display = 'grid';
-
-                    var news = data.news || [];
                     var nl = document.getElementById('newsList');
-                    if (news.length > 0) {
-                        nl.innerHTML = news.map(function(n) {
-                            return '<div class="news-item"><div class="news-text">' + n + '</div><div class="news-src">KAP / Yahoo Finance</div></div>';
-                        }).join('');
-                    } else {
-                        nl.innerHTML = '<div class="news-item"><div class="news-text" style="color:#6b7280">Son günlerde bildirim bulunamadı.</div></div>';
-                    }
+                    nl.innerHTML = (data.news || []).map(n => '<div class="news-item"><div class="news-text">' + n + '</div></div>').join('');
                     document.getElementById('newsSection').style.display = 'block';
-                })
-                .catch(function(e) {
-                    document.getElementById('loadingTxt').textContent = 'Sunucuyla bağlantı kurulamadı.';
                 });
         }
 
-        function closeModal() {
-            document.getElementById('stockModal').classList.remove('open');
-        }
+        function closeModal() { document.getElementById('stockModal').classList.remove('open'); }
 
         // --- PORTFÖY & SİNYAL VERİLERİ ---
         function fmt(n) {
@@ -394,15 +378,23 @@
         }
 
         function loadData() {
-            // Hisselerin yüzdelik değişimleri
+            // Hisselerin anlık fiyatları ve yüzdelik değişimleri
             fetch('/api/market').then(function(r){return r.json();}).then(function(d){
                 for (var sym in d) {
-                    var el = document.getElementById('pct-' + sym);
-                    if (el) {
-                        var val = parseFloat(d[sym]);
-                        var sign = val > 0 ? '+' : '';
-                        el.textContent = sign + val.toFixed(2) + '%';
-                        el.className = 'pct ' + (val > 0 ? 'up' : (val < 0 ? 'down' : 'flat'));
+                    var elPct = document.getElementById('pct-' + sym);
+                    var elPrice = document.getElementById('price-' + sym);
+                    if (elPct && elPrice) {
+                        var obj = d[sym];
+                        var valPct = typeof obj === 'object' ? obj.percent : parseFloat(obj);
+                        var valPrice = typeof obj === 'object' ? obj.price : 0;
+                        
+                        var sign = valPct > 0 ? '▲ ' : (valPct < 0 ? '▼ ' : '');
+                        elPct.textContent = sign + Math.abs(valPct).toFixed(2) + '%';
+                        elPct.className = 'sc-pct pct ' + (valPct > 0 ? 'up' : (valPct < 0 ? 'down' : 'flat'));
+                        
+                        if(valPrice > 0) {
+                            elPrice.textContent = new Intl.NumberFormat('tr-TR').format(valPrice) + ' ₺';
+                        }
                     }
                 }
             }).catch(function(){});

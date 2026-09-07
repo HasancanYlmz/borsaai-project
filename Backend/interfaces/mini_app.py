@@ -167,7 +167,10 @@ async def start_mini_app_server():
                         else:
                             pct = 0.0
                         clean_sym = sym.replace(".IS", "")
-                        res[clean_sym] = round(pct, 2)
+                        res[clean_sym] = {
+                            "percent": round(pct, 2),
+                            "price": round(curr, 2) if curr else 0.0
+                        }
                     except:
                         pass
                 return res
