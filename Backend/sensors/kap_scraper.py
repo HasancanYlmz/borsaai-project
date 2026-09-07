@@ -54,7 +54,22 @@ def get_kap_news(symbol: str) -> List[str]:
             except:
                 pass
         
-        # 3. Google Haberler Entegrasyonu (Piyasa Dedikodusu ve Sondakika)
+        # 3. Bloomberg HT Entegrasyonu (Saf Finans İstihbaratı)
+        try:
+            b_url = "https://www.bloomberght.com/rss"
+            b_resp = requests.get(b_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
+            if b_resp.status_code == 200:
+                root = ET.fromstring(b_resp.content)
+                for item in root.findall('.//item'):
+                    title = item.find('title').text if item.find('title') is not None else ""
+                    desc = item.find('description').text if item.find('description') is not None else ""
+                    # Haberin başlığında veya özetinde hisse kodu geçiyorsa (örn: AKBNK) hemen yakala
+                    if symbol in title or symbol in desc:
+                        news_list.append(f"BLOOMBERG HT (KRİTİK) - {title}")
+        except Exception:
+            pass
+
+        # 4. Google Haberler Entegrasyonu (Piyasa Dedikodusu ve Sondakika)
         try:
             gnews_url = f"https://news.google.com/rss/search?q={symbol}+hisse&hl=tr&gl=TR&ceid=TR:tr"
             g_resp = requests.get(gnews_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
@@ -62,16 +77,16 @@ def get_kap_news(symbol: str) -> List[str]:
                 root = ET.fromstring(g_resp.content)
                 g_count = 0
                 for item in root.findall('.//item'):
-                    if g_count >= 3: # En taze 3 Google haberi
+                    if g_count >= 2: # Bloomberg eklendiği için Google'ı 2'ye düşürdük
                         break
                     title = item.find('title').text
                     if title:
-                        news_list.append(f"PİYASA SÖYLENTİSİ/HABER - {title}")
+                        news_list.append(f"PİYASA SÖYLENTİSİ - {title}")
                         g_count += 1
         except Exception as e:
             pass
         
-        log_event("KAP_SENSOR", f"{symbol} için {len(news_list)} adet (KAP+Google+Yahoo) haber bulundu.")
+        log_event("KAP_SENSOR", f"{symbol} için {len(news_list)} adet (KAP+Bloomberg+Google) haber bulundu.")
         
         # Sonucu hafızaya (Cache) mühürle
         _KAP_CACHE[symbol] = (news_list, current_time)

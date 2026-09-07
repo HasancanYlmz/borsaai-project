@@ -73,6 +73,17 @@ async def news_and_tv_watcher():
             log_event("ERROR", f"Data watcher loop error: {e}", level="ERROR")
             await asyncio.sleep(10)
 
+def check_bist100_health() -> float:
+    """BIST100 endeksinin günlük yüzde değişimini hesaplar."""
+    try:
+        import yfinance as yf
+        t = yf.Ticker("XU100.IS")
+        prev = t.fast_info.get("previousClose", 1.0)
+        curr = t.fast_info.get("lastPrice", prev)
+        return ((curr - prev) / prev) * 100
+    except:
+        return 0.0
+
 async def market_trader():
     """Market trader process (AKD, RVOL, Order routing)."""
     log_event("TRADER", "Market trader process initialized.")
@@ -90,7 +101,13 @@ async def market_trader():
             portfolio = Portfolio(id=1, cash_balance=Decimal(str(cash)), total_equity=Decimal(str(equity)))
             active_symbols = get_active_symbols()
             
-            log_event("LOOP", f"New trading cycle started. Cash: {portfolio.cash_balance:.2f} TRY, Active trades: {len(active_symbols)}")
+            # --- PİYASA REJİMİ FİLTRESİ (BIST100 KALKANI) ---
+            bist100_change = await asyncio.to_thread(check_bist100_health)
+            is_market_crashing = bist100_change < -1.0 # Endeks %1'den fazla eksideyken kalkanı aç
+            
+            log_event("LOOP", f"New trading cycle. Cash: {portfolio.cash_balance:.2f} TRY, Active trades: {len(active_symbols)}, BIST100: %{bist100_change:.2f}")
+            if is_market_crashing:
+                log_event("SHIELD", f"BIST100 KALKANI AKTİF! Endeks çöküşte (%{bist100_change:.2f}). Yeni alımlar durduruldu.")
             
             for symbol in TARGET_SYMBOLS:
                 if not IS_RUNNING: break
@@ -129,19 +146,30 @@ async def market_trader():
                 if live_price_raw and live_price_raw > 0:
                     current_price = Decimal(str(live_price_raw))
                     
-                    # --- OTOMATİK KAR AL VE ZARAR KES (TP / SL) ---
+                    # --- İZLEYEN STOP VE ZARAR KES (TRAILING STOP & SL) ---
                     if symbol in active_symbols:
                         full_trades = get_active_trades()
                         for t in full_trades:
                             if t[0] == symbol:
                                 buy_price = float(t[1])
                                 curr_price = float(current_price)
+                                
+                                memory = _GLOBAL_MEMORY.setdefault(symbol, {})
+                                highest_seen = memory.get("highest_seen", buy_price)
+                                
+                                # Eğer fiyat yeni bir zirve yaptıysa, zirveyi güncelle (Kârı takip et)
+                                if curr_price > highest_seen:
+                                    memory["highest_seen"] = curr_price
+                                    highest_seen = curr_price
+                                
                                 pnl_pct = ((curr_price - buy_price) / buy_price) * 100
                                 
-                                # Hedef Kar (+%3) veya Zarar Kes (-%2)
-                                if pnl_pct >= 3.0:
+                                # Zirveden %2.5 aşağı düşerse (İzleyen Stop) veya doğrudan %2 zarar ederse (Sabit SL) SAT
+                                trailing_stop_price = highest_seen * 0.975 # %2.5 geri çekilme payı
+                                
+                                if curr_price <= trailing_stop_price and pnl_pct > 0:
                                     sig.signal_type = SignalType.SELL
-                                    sig.reason = f"Otomatik KAR AL tetiklendi (+%{pnl_pct:.2f})"
+                                    sig.reason = f"İzleyen Stop (Trailing) tetiklendi. Zirveden %2.5 düştü. Kâr: %{pnl_pct:.2f}"
                                 elif pnl_pct <= -2.0:
                                     sig.signal_type = SignalType.SELL
                                     sig.reason = f"Otomatik ZARAR KES tetiklendi (%{pnl_pct:.2f})"
@@ -149,12 +177,15 @@ async def market_trader():
                     # -----------------------------------------------
                     
                     if sig.signal_type == SignalType.BUY and symbol not in active_symbols:
-                        trade = execute_virtual_order(sig, portfolio, current_price, active_symbols)
-                        if trade:
-                            save_trade(trade.symbol, trade.buy_price, trade.lot_amount)
-                            update_portfolio_cash(portfolio.cash_balance)
-                            active_symbols.append(trade.symbol)
-                            await asyncio.to_thread(send_telegram_message, f"🟢 <b>ALIM YAPILDI:</b> {trade.symbol}\nFiyat: {trade.buy_price:.2f} TL\nLot: {trade.lot_amount}\nNeden: {sig.reason}")
+                        if is_market_crashing:
+                            log_event("SHIELD", f"{symbol} Güçlü AL sinyali iptal edildi (BIST100 Kalkanı Devrede).")
+                        else:
+                            trade = execute_virtual_order(sig, portfolio, current_price, active_symbols)
+                            if trade:
+                                save_trade(trade.symbol, trade.buy_price, trade.lot_amount)
+                                update_portfolio_cash(portfolio.cash_balance)
+                                active_symbols.append(trade.symbol)
+                                await asyncio.to_thread(send_telegram_message, f"🟢 <b>ALIM YAPILDI:</b> {trade.symbol}\nFiyat: {trade.buy_price:.2f} TL\nLot: {trade.lot_amount}\nNeden: {sig.reason}")
                             
                     elif sig.signal_type == SignalType.SELL and symbol in active_symbols:
                         full_trades = get_active_trades()
