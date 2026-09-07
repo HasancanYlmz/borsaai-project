@@ -135,13 +135,13 @@ async def handle_command(chat_id: str, text: str):
         try:
             import yfinance as yf
             ticker = yf.Ticker(f"{symbol}.IS")
-            fi = ticker.fast_info
-            price = fi.get("last_price", 0)
-            prev_close = fi.get("previous_close", price)
+            info = ticker.info
+            price = info.get("currentPrice") or info.get("regularMarketPrice") or 0
+            prev_close = info.get("previousClose", price)
             change = price - prev_close
             change_pct = (change / prev_close * 100) if prev_close else 0
-            volume = fi.get("last_volume", 0)
-            market_cap = fi.get("market_cap", 0)
+            volume = info.get("volume", 0)
+            market_cap = info.get("marketCap", 0)
             direction = "+" if change >= 0 else ""
             msg = (
                 f"<b>{symbol} Canli Veri</b>\n"
