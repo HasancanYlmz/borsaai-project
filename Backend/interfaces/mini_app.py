@@ -160,9 +160,12 @@ async def start_mini_app_server():
                 for sym, t in tickers.tickers.items():
                     try:
                         # yfinance cache'lenmiş olabileceği için fast_info kullanıyoruz
-                        prev = t.fast_info.get("previous_close", 0.0)
-                        curr = t.fast_info.get("last_price", prev)
-                        pct = ((curr - prev) / prev) * 100 if prev > 0 else 0.0
+                        prev = t.fast_info.get("previousClose", 0.0)
+                        curr = t.fast_info.get("lastPrice", prev)
+                        if prev and prev > 0:
+                            pct = ((curr - prev) / prev) * 100
+                        else:
+                            pct = 0.0
                         clean_sym = sym.replace(".IS", "")
                         res[clean_sym] = round(pct, 2)
                     except:
