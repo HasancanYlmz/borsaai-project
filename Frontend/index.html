@@ -84,7 +84,7 @@
         .sig-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid; margin-left: 6px; }
         .sig-badge.buy { color: #22c55e; border-color: #22c55e; background: rgba(34,197,94,0.1); }
         .sig-badge.sell { color: #ef4444; border-color: #ef4444; background: rgba(239,68,68,0.1); }
-        .sig-badge.hold { color: #6b7280; border-color: #6b7280; }
+        .sig-badge.hold { color: #6b7280; border-color: #6b7280; background: rgba(107,114,128,0.1); }
         .sig-time { font-size: 11px; color: #6b7280; }
         .sig-reason { font-size: 11px; color: #9ca3af; line-height: 1.4; }
 
@@ -406,7 +406,8 @@
                 var sl = document.getElementById('signalsList');
                 if (d.signals && d.signals.length > 0) {
                     sl.innerHTML = d.signals.map(function(s) {
-                        var cls = s.type === 'BUY' ? 'buy' : (s.type === 'SELL' ? 'sell' : 'hold');
+                        var t = s.type ? s.type.toUpperCase() : '';
+                        var cls = (t === 'AL' || t === 'BUY') ? 'buy' : ((t === 'SAT' || t === 'SELL') ? 'sell' : 'hold');
                         return '<div class="sig-card" onclick="openModal(\'' + s.symbol + '\')">' +
                             '<div class="sig-header"><div><span class="sig-sym">' + s.symbol + '</span>' +
                             '<span class="sig-badge ' + cls + '">' + s.type + '</span></div>' +
