@@ -83,8 +83,10 @@ def evaluate_stock_committee(symbol: str, payload: dict) -> Dict:
     # Güvenli dönüşüm: önce sınırla, sonra int'e çevir
     final_score = max(0, min(100, int(round(score))))
 
-    # Aksiyon Kararı (Sinir: >=55 AL | 11-54 TUT | <=10 SAT)
-    if final_score >= 55:
+    # Aksiyon Kararı (Sinir: >=40 AL | 11-39 TUT | <=10 SAT)
+    # Eşik değeri 55'ten 40'a düşürüldü. Sabah saatlerinde hacim tam oturmadığı için
+    # sistem çok tutucu davranıyordu, bu sayede daha esnek Alım yapacak.
+    if final_score >= 40:
         decision = "AL"
     elif final_score <= 10:
         decision = "SAT"
