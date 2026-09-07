@@ -148,6 +148,34 @@ async def start_mini_app_server():
             
     app.router.add_get('/api/chart', handle_api_chart)
     
+    # Yeni Tüm Piyasa Yüzdelik Değişimleri
+    async def handle_api_market(request):
+        try:
+            import yfinance as yf
+            symbols = "AKBNK.IS ALARK.IS ASELS.IS ASTOR.IS BIMAS.IS BRSAN.IS DOAS.IS EKGYO.IS ENKAI.IS EREGL.IS FROTO.IS GARAN.IS GUBRF.IS HEKTS.IS ISCTR.IS KCHOL.IS KONTR.IS KOZAL.IS KRDMD.IS ODAS.IS OYAKC.IS PETKM.IS PGSUS.IS SAHOL.IS SASA.IS SISE.IS TCELL.IS THYAO.IS TOASO.IS TUPRS.IS YKBNK.IS"
+            
+            def fetch_batch():
+                tickers = yf.Tickers(symbols)
+                res = {}
+                for sym, t in tickers.tickers.items():
+                    try:
+                        # yfinance cache'lenmiş olabileceği için fast_info kullanıyoruz
+                        prev = t.fast_info.get("previous_close", 0.0)
+                        curr = t.fast_info.get("last_price", prev)
+                        pct = ((curr - prev) / prev) * 100 if prev > 0 else 0.0
+                        clean_sym = sym.replace(".IS", "")
+                        res[clean_sym] = round(pct, 2)
+                    except:
+                        pass
+                return res
+                
+            data = await asyncio.to_thread(fetch_batch)
+            return web.json_response(data)
+        except:
+            return web.json_response({})
+            
+    app.router.add_get('/api/market', handle_api_market)
+    
     runner = web.AppRunner(app)
     await runner.setup()
     

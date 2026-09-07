@@ -36,10 +36,16 @@
 
         /* STOCK GRID */
         .stock-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 20px; }
-        .stock-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: border-color 0.2s; }
+        .stock-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: border-color 0.2s; }
         .stock-card:active { border-color: #3b82f6; background: #1e2433; }
+        .stock-card-left { display: flex; flex-direction: column; }
         .stock-card .sym { font-weight: 700; font-size: 14px; color: #fff; }
-        .stock-card .arrow { color: #6b7280; font-size: 16px; }
+        .stock-card .sym-name { font-size: 10px; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+        .stock-card-right { display: flex; flex-direction: column; align-items: flex-end; }
+        .stock-card .pct { font-size: 12px; font-weight: 700; }
+        .pct.up { color: #22c55e; }
+        .pct.down { color: #ef4444; }
+        .pct.flat { color: #6b7280; }
 
         /* PORTFOLIO CARD */
         .balance-card { background: #151924; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
@@ -135,40 +141,9 @@
                 <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)" oninput="filterStocks()">
             </div>
             <div class="section-title">Popüler Hisseler (BIST30)</div>
-            <div class="stock-grid" id="stockGrid">
-                <!-- BIST30 - Statik HTML (JS gerektirmez) -->
-                <div class="stock-card" onclick="openModal('AKBNK')"><span class="sym">AKBNK</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('ALARK')"><span class="sym">ALARK</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('ASELS')"><span class="sym">ASELS</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('ASTOR')"><span class="sym">ASTOR</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('BIMAS')"><span class="sym">BIMAS</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('BRSAN')"><span class="sym">BRSAN</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('DOAS')"><span class="sym">DOAS</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('EKGYO')"><span class="sym">EKGYO</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('ENKAI')"><span class="sym">ENKAI</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('EREGL')"><span class="sym">EREGL</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('FROTO')"><span class="sym">FROTO</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('GARAN')"><span class="sym">GARAN</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('GUBRF')"><span class="sym">GUBRF</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('HEKTS')"><span class="sym">HEKTS</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('ISCTR')"><span class="sym">ISCTR</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('KCHOL')"><span class="sym">KCHOL</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('KONTR')"><span class="sym">KONTR</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('KOZAL')"><span class="sym">KOZAL</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('KRDMD')"><span class="sym">KRDMD</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('ODAS')"><span class="sym">ODAS</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('OYAKC')"><span class="sym">OYAKC</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('PETKM')"><span class="sym">PETKM</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('PGSUS')"><span class="sym">PGSUS</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('SAHOL')"><span class="sym">SAHOL</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('SASA')"><span class="sym">SASA</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('SISE')"><span class="sym">SISE</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('TCELL')"><span class="sym">TCELL</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('THYAO')"><span class="sym">THYAO</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('TOASO')"><span class="sym">TOASO</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('TUPRS')"><span class="sym">TUPRS</span><span class="arrow">›</span></div>
-                <div class="stock-card" onclick="openModal('YKBNK')"><span class="sym">YKBNK</span><span class="arrow">›</span></div>
-            </div>
+                <div class="stock-grid" id="stockGrid">
+                    <!-- Dinamik olarak JS ile doldurulacak -->
+                </div>
         </div>
 
         <!-- PORTFÖY TAB -->
@@ -244,13 +219,51 @@
             btn.classList.add('active');
         }
 
+        // --- ŞİRKET BİLGİLERİ (ISIM VE SEMBOL) ---
+        const COMPANY_NAMES = {
+            'AKBNK': 'Akbank T.A.Ş.', 'ALARK': 'Alarko Holding', 'ASELS': 'Aselsan',
+            'ASTOR': 'Astor Enerji', 'BIMAS': 'BİM Birleşik Mağazalar', 'BRSAN': 'Borusan Boru',
+            'DOAS': 'Doğuş Otomotiv', 'EKGYO': 'Emlak Konut GYO', 'ENKAI': 'Enka İnşaat',
+            'EREGL': 'Erdemir', 'FROTO': 'Ford Otosan', 'GARAN': 'Garanti BBVA',
+            'GUBRF': 'Gübretaş', 'HEKTS': 'Hektaş', 'ISCTR': 'İş Bankası (C)',
+            'KCHOL': 'Koç Holding', 'KONTR': 'Kontrolmatik', 'KOZAL': 'Koza Altın',
+            'KRDMD': 'Kardemir (D)', 'ODAS': 'Odaş Elektrik', 'OYAKC': 'Oyak Çimento',
+            'PETKM': 'Petkim', 'PGSUS': 'Pegasus', 'SAHOL': 'Sabancı Holding',
+            'SASA': 'Sasa Polyester', 'SISE': 'Şişecam', 'TCELL': 'Turkcell',
+            'THYAO': 'Türk Hava Yolları', 'TOASO': 'Tofaş', 'TUPRS': 'Tüpraş',
+            'YKBNK': 'Yapı Kredi'
+        };
+
+        function renderMarketGrid() {
+            var grid = document.getElementById('stockGrid');
+            var html = '';
+            for (var sym in COMPANY_NAMES) {
+                var name = COMPANY_NAMES[sym];
+                // Başlangıçta yüzde 0 olarak gösteriyoruz, API'den gelince güncellenecek
+                html += '<div class="stock-card" onclick="openModal(\'' + sym + '\')">' +
+                            '<div class="stock-card-left">' +
+                                '<span class="sym">' + sym + '</span>' +
+                                '<span class="sym-name">' + name + '</span>' +
+                            '</div>' +
+                            '<div class="stock-card-right">' +
+                                '<span class="pct flat" id="pct-' + sym + '">%0.00</span>' +
+                            '</div>' +
+                        '</div>';
+            }
+            grid.innerHTML = html;
+        }
+        
+        // Sayfa yüklenince ızgarayı çiz
+        renderMarketGrid();
+
         // --- ARAMA FİLTRESİ ---
         function filterStocks() {
             var q = document.getElementById('searchInput').value.toUpperCase().trim();
             var cards = document.querySelectorAll('#stockGrid .stock-card');
             cards.forEach(function(card) {
-                var sym = card.querySelector('.sym').textContent;
-                card.style.display = (q === '' || sym.indexOf(q) !== -1) ? '' : 'none';
+                var sym = card.querySelector('.sym').textContent.toUpperCase();
+                var name = card.querySelector('.sym-name').textContent.toUpperCase();
+                card.style.display = (q === '' || sym.indexOf(q) !== -1 || name.indexOf(q) !== -1) ? '' : 'none';
             });
         }
 
@@ -381,7 +394,20 @@
         }
 
         function loadData() {
-            // Bakiye
+            // Hisselerin yüzdelik değişimleri
+            fetch('/api/market').then(function(r){return r.json();}).then(function(d){
+                for (var sym in d) {
+                    var el = document.getElementById('pct-' + sym);
+                    if (el) {
+                        var val = parseFloat(d[sym]);
+                        var sign = val > 0 ? '+' : '';
+                        el.textContent = sign + val.toFixed(2) + '%';
+                        el.className = 'pct ' + (val > 0 ? 'up' : (val < 0 ? 'down' : 'flat'));
+                    }
+                }
+            }).catch(function(){});
+
+            // Bakiye ve Sinyaller
             fetch('/api/data').then(function(r){return r.json();}).then(function(d){
                 document.getElementById('cashBalance').textContent = fmt(d.cash);
                 // Sinyaller

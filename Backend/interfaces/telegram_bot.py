@@ -134,8 +134,10 @@ async def handle_command(chat_id: str, text: str):
         symbol = parts[1].upper()
         try:
             import yfinance as yf
-            ticker = yf.Ticker(f"{symbol}.IS")
-            info = ticker.info
+            def fetch_ticker_data(sym):
+                return yf.Ticker(f"{sym}.IS").info
+            
+            info = await asyncio.to_thread(fetch_ticker_data, symbol)
             price = info.get("currentPrice") or info.get("regularMarketPrice") or 0
             prev_close = info.get("previousClose", price)
             change = price - prev_close
