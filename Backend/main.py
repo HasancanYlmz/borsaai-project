@@ -125,7 +125,7 @@ async def market_trader():
                 save_signal(sig.symbol, sig.signal_type.value, sig.regime.value, sig.confidence_score, sig.reason)
                 
                 # Alım/Satım Emirleri
-                live_price_raw = tv_data.get("close", 0)
+                live_price_raw = tv_data.get("close_price", 0)
                 if live_price_raw and live_price_raw > 0:
                     current_price = Decimal(str(live_price_raw))
                     
