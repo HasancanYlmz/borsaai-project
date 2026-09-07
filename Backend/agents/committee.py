@@ -40,7 +40,8 @@ def evaluate_stock_committee(symbol: str, payload: dict) -> Dict:
     news_data = payload.get("news_data", {})
     fundamental = payload.get("fundamental_data", {})
 
-    score = 0.0
+    # Taban puanı 0'dan 50'ye çektik (Nötr piyasa = 50 puan, yani TUT).
+    score = 50.0
     reasons = []
 
     # 1. TRADINGVIEW (Teknik Analiz Oyu - %30 Etki)
@@ -49,14 +50,17 @@ def evaluate_stock_committee(symbol: str, payload: dict) -> Dict:
         score += 20.0 if "strong" in tv_rec else 10.0
         reasons.append(f"Teknik: {tv_data.get('recommendation', '')}")
     elif "sell" in tv_rec:
-        score -= 20.0
+        score -= 20.0 if "strong" in tv_rec else 10.0
         reasons.append(f"Teknik: {tv_data.get('recommendation', '')}")
 
     # 2. RVOL VE MOMENTUM (Hacim Oyu - %40 Etki)
-    momentum = float(rvol_data.get("momentum_score", 0))
-    score += (momentum * 0.4)
-    if momentum > 70:
-        reasons.append(f"Guclu Hacim (RVOL: {rvol_data.get('rvol_score', '?')})")
+    # rvol_sensor, 'rvol_score' olarak float bir değer döndürüyor (örn: 1.2)
+    rvol_multiplier = float(rvol_data.get("rvol_score", 0))
+    momentum = min(100.0, rvol_multiplier * 30.0) # 3.0 rvol = 90 momentum
+    # Nötr (50) üzerine momentumun yarısını ekliyoruz
+    score += (momentum * 0.2)
+    if rvol_multiplier > 1.2:
+        reasons.append(f"Guclu Hacim (RVOL: {rvol_multiplier:.1f}x)")
 
     # 3. YABANCI & KURUMSAL TAKAS (Temel Analiz Oyu - %20 Etki)
     fundamental = payload.get("fundamental_data", {})
@@ -74,7 +78,7 @@ def evaluate_stock_committee(symbol: str, payload: dict) -> Dict:
     # 4. TEMEL HABER (KAP Oyu - %10 Etki)
     sentiment_norm = _normalize(news_data.get("sentiment", ""))
     if any(k in sentiment_norm for k in POZITIF_KELIMELER):
-        score += 10.0
+        score += 15.0
         reasons.append("Pozitif KAP Haberi")
     elif any(k in sentiment_norm for k in NEGATIF_KELIMELER):
         score -= 20.0
@@ -83,12 +87,13 @@ def evaluate_stock_committee(symbol: str, payload: dict) -> Dict:
     # Güvenli dönüşüm: önce sınırla, sonra int'e çevir
     final_score = max(0, min(100, int(round(score))))
 
-    # Aksiyon Kararı (Sinir: >=40 AL | 11-39 TUT | <=10 SAT)
-    # Eşik değeri 55'ten 40'a düşürüldü. Sabah saatlerinde hacim tam oturmadığı için
-    # sistem çok tutucu davranıyordu, bu sayede daha esnek Alım yapacak.
-    if final_score >= 40:
+    # Aksiyon Kararı: Taban 50 olduğu için
+    # >= 70: AL (Güçlü teknik + hacim)
+    # <= 35: SAT (Negatif haber veya güçlü sat)
+    # Arası: TUT
+    if final_score >= 65:
         decision = "AL"
-    elif final_score <= 10:
+    elif final_score <= 35:
         decision = "SAT"
     else:
         decision = "TUT"
