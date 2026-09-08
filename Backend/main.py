@@ -32,10 +32,14 @@ from core.config import load_config
 _cfg = load_config()
 _trading_cfg = _cfg.get("trading", {})
 TARGET_SYMBOLS = _trading_cfg.get("symbols", [
-    "AKBNK", "ALARK", "ASELS", "ASTOR", "BIMAS", "BRSAN", "CWISE", "DOAS", "EKGYO", "ENKAI", 
-    "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR", "KCHOL", "KONTR", "KOZAA", "KOZAL", 
-    "KRDMD", "ODAS", "OYAKC", "PETKM", "PGSUS", "SAHOL", "SASA", "SISE", "TCELL", "THYAO", 
-    "TOASO", "TUPRS", "YKBNK"
+    "AKBNK", "ALARK", "ASELS", "ASTOR", "BIMAS", "BRSAN", "DOAS", "EKGYO", 
+    "ENKAI", "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR", "KCHOL", 
+    "KONTR", "KOZAL", "KRDMD", "ODAS", "OYAKC", "PETKM", "PGSUS", "SAHOL", 
+    "SASA", "SISE", "TCELL", "THYAO", "TOASO", "TUPRS", "YKBNK",
+    # BIST50 İlaveleri
+    "MGROS", "SOKM", "MAVI", "TAVHL", "TTRAK", "CCOLA", "AEFES", "ULKER",
+    "VAKBN", "HALKB", "ISMEN", "DOHOL", "KOZAA", "IPEKE", "AKSEN", "GWIND",
+    "ALFAS", "EUPWR", "CWENE", "KORDS"
 ])
 
 def handle_exit(sig, frame):
@@ -73,6 +77,8 @@ async def news_and_tv_watcher():
             log_event("ERROR", f"Data watcher loop error: {e}", level="ERROR")
             await asyncio.sleep(10)
 
+from core.sectors import get_sector
+
 def check_bist100_health() -> float:
     """BIST100 endeksinin günlük yüzde değişimini hesaplar."""
     try:
@@ -83,6 +89,31 @@ def check_bist100_health() -> float:
         return ((curr - prev) / prev) * 100
     except:
         return 0.0
+
+def check_global_panic() -> bool:
+    """VIX endeksini kontrol ederek küresel panik olup olmadığını saptar."""
+    try:
+        import yfinance as yf
+        t = yf.Ticker("^VIX")
+        vix_price = t.fast_info.get("lastPrice", 0.0)
+        if vix_price >= 25.0:
+            return True
+        return False
+    except:
+        return False
+
+def check_sector_exposure(new_symbol: str, active_symbols: list) -> bool:
+    """Aynı sektörden 2'den fazla hisse alınmasını engeller."""
+    target_sector = get_sector(new_symbol)
+    if target_sector == "UNKNOWN":
+        return True # Bilinmeyen sektöre izin ver
+        
+    count = 0
+    for sym in active_symbols:
+        if get_sector(sym) == target_sector:
+            count += 1
+            
+    return count < 2 # 2'den küçükse izin ver (En fazla 2)
 
 async def market_trader():
     """Market trader process (AKD, RVOL, Order routing)."""
@@ -105,9 +136,14 @@ async def market_trader():
             bist100_change = await asyncio.to_thread(check_bist100_health)
             is_market_crashing = bist100_change < -1.0 # Endeks %1'den fazla eksideyken kalkanı aç
             
+            # --- KÜRESEL PANİK RADARI (VIX KALKANI) ---
+            is_global_panic = await asyncio.to_thread(check_global_panic)
+            
             log_event("LOOP", f"New trading cycle. Cash: {portfolio.cash_balance:.2f} TRY, Active trades: {len(active_symbols)}, BIST100: %{bist100_change:.2f}")
             if is_market_crashing:
                 log_event("SHIELD", f"BIST100 KALKANI AKTİF! Endeks çöküşte (%{bist100_change:.2f}). Yeni alımlar durduruldu.")
+            if is_global_panic:
+                log_event("SHIELD", f"VIX KÜRESEL PANİK RADARI AKTİF! Wall Street çöküşte (VIX >= 25). BIST30 alımları askıya alındı.")
             
             for symbol in TARGET_SYMBOLS:
                 if not IS_RUNNING: break
@@ -164,24 +200,25 @@ async def market_trader():
                                 
                                 pnl_pct = ((curr_price - buy_price) / buy_price) * 100
                                 
-                                # --- YENİ VUR-KAÇ (DAY TRADER) KURALLARI ---
-                                trailing_stop_price = highest_seen * 0.990 # %1.0 geri çekilme payı
+                                # --- İZLEYEN STOP VE ZARAR KES (TREND TAKİBİ) ---
+                                trailing_stop_price = highest_seen * 0.9825 # %1.75 geri çekilme payı
                                 
-                                if pnl_pct >= 2.5:
+                                if curr_price <= trailing_stop_price and pnl_pct > 0:
                                     sig.signal_type = SignalType.SELL
-                                    sig.reason = f"Hedef Kâr (Take Profit) Noktasına Ulaşıldı (+%{pnl_pct:.2f})"
-                                elif curr_price <= trailing_stop_price and pnl_pct > 0:
+                                    sig.reason = f"İzleyen Stop (Trailing) tetiklendi. Zirveden %1.75 düştü. Kâr: %{pnl_pct:.2f}"
+                                elif pnl_pct <= -2.0:
                                     sig.signal_type = SignalType.SELL
-                                    sig.reason = f"İzleyen Stop (Trailing) tetiklendi. Zirveden %1.0 düştü. Kâr: %{pnl_pct:.2f}"
-                                elif pnl_pct <= -1.25:
-                                    sig.signal_type = SignalType.SELL
-                                    sig.reason = f"Sıkı ZARAR KES tetiklendi (%{pnl_pct:.2f})"
+                                    sig.reason = f"Otomatik ZARAR KES tetiklendi (%{pnl_pct:.2f})"
                                 break
                     # -----------------------------------------------
                     
                     if sig.signal_type == SignalType.BUY and symbol not in active_symbols:
                         if is_market_crashing:
-                            log_event("SHIELD", f"{symbol} Güçlü AL sinyali iptal edildi (BIST100 Kalkanı Devrede).")
+                            log_event("SHIELD", f"{symbol} AL sinyali iptal edildi (BIST100 Kalkanı Devrede).")
+                        elif is_global_panic:
+                            log_event("SHIELD", f"{symbol} AL sinyali iptal edildi (VIX Küresel Panik Radarı).")
+                        elif not check_sector_exposure(symbol, active_symbols):
+                            log_event("SHIELD", f"{symbol} AL sinyali iptal edildi (Sektörel Maruziyet Limiti Aşıldı).")
                         else:
                             trade = execute_virtual_order(sig, portfolio, current_price, active_symbols)
                             if trade:
@@ -194,7 +231,7 @@ async def market_trader():
                         full_trades = get_active_trades()
                         sell_result = execute_virtual_sell(sig, portfolio, current_price, full_trades)
                         if sell_result:
-                            remove_trade(symbol)
+                            remove_trade(symbol, sell_price=sell_result.get("sell_price", 0.0), pnl=float(sell_result.get("pnl", 0.0)), reason=sig.reason)
                             update_portfolio_cash(portfolio.cash_balance)
                             active_symbols.remove(symbol)
                             durum = "KAR" if sell_result['pnl'] > 0 else "ZARAR"

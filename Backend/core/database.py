@@ -44,6 +44,11 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT UNIQUE, buy_price REAL,
             lot_amount INTEGER, buy_time TEXT)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS trade_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT, buy_price REAL, sell_price REAL,
+            lot_amount INTEGER, pnl REAL, reason TEXT,
+            buy_time TEXT, sell_time TEXT)''')
 
         cursor.execute("SELECT COUNT(*) FROM portfolio")
         if cursor.fetchone()[0] == 0:
@@ -104,11 +109,25 @@ def get_active_symbols() -> List[str]:
     trades = get_active_trades()
     return [row[0] for row in trades]
 
-def remove_trade(symbol: str):
-    """Removes a sold position from active_trades."""
+def remove_trade(symbol: str, sell_price: float = 0.0, pnl: float = 0.0, reason: str = ""):
+    """Archives a sold position to trade_history and removes it from active_trades."""
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
+        
+        # 1. Eski işlemi bul
+        cursor.execute('SELECT buy_price, lot_amount, buy_time FROM active_trades WHERE symbol = ?', (symbol,))
+        row = cursor.fetchone()
+        
+        if row:
+            buy_price, lot_amount, buy_time = row
+            # 2. Arşive (Geçmişe) kaydet
+            cursor.execute('''
+                INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, get_ist_time_str()))
+            
+        # 3. Aktif tablodan sil
         cursor.execute('DELETE FROM active_trades WHERE symbol = ?', (symbol,))
         conn.commit()
         conn.close()

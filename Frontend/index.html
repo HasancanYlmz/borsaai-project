@@ -142,7 +142,10 @@
         <div id="tab-piyasa" class="tab active">
             <div class="search-box">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
-                <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)" oninput="filterStocks()">
+                <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)">
+            </div>
+            <div style="margin-bottom:15px;">
+                <button id="btnVolFilter" class="tf-btn" style="width:auto; padding:6px 12px; font-size:12px; border:1px solid #374151;" onclick="toggleVolFilter()">🔥 Hacim Patlaması Filtresi (RVOL > 1.5)</button>
             </div>
             <div class="section-title">Popüler Hisseler (BIST30)</div>
                 <div class="stock-grid" id="stockGrid">
@@ -235,7 +238,15 @@
             'PETKM': 'Petkim', 'PGSUS': 'Pegasus', 'SAHOL': 'Sabancı Holding',
             'SASA': 'Sasa Polyester', 'SISE': 'Şişecam', 'TCELL': 'Turkcell',
             'THYAO': 'Türk Hava Yolları', 'TOASO': 'Tofaş', 'TUPRS': 'Tüpraş',
-            'YKBNK': 'Yapı Kredi'
+            'YKBNK': 'Yapı Kredi',
+            // BIST50 İlaveleri
+            'MGROS': 'Migros Ticaret', 'SOKM': 'Şok Marketler', 'MAVI': 'Mavi Giyim',
+            'TAVHL': 'TAV Havalimanları', 'TTRAK': 'Türk Traktör', 'CCOLA': 'Coca-Cola İçecek',
+            'AEFES': 'Anadolu Efes', 'ULKER': 'Ülker Bisküvi', 'VAKBN': 'VakıfBank',
+            'HALKB': 'Halkbank', 'ISMEN': 'İş Yatırım', 'DOHOL': 'Doğan Holding',
+            'KOZAA': 'Koza Madencilik', 'IPEKE': 'İpek Doğal Enerji', 'AKSEN': 'Aksa Enerji',
+            'GWIND': 'Galata Wind', 'ALFAS': 'Alfa Solar Enerji', 'EUPWR': 'Europower Enerji',
+            'CWENE': 'CW Enerji', 'KORDS': 'Kordsa Teknik Tekstil'
         };
 
         // --- LİSTE OLUŞTURUCU VE LOGO RENGİ ---
@@ -251,7 +262,7 @@
                 var name = COMPANY_NAMES[sym];
                 var color = getLogoColor(sym);
                 var initialLetter = sym.substring(0, 2);
-                html += '<div class="stock-card" onclick="openModal(\'' + sym + '\')">' +
+                html += '<div class="stock-card" id="card-' + sym + '" data-rvol="0" onclick="openModal(\'' + sym + '\')">' +
                             '<div class="sc-left">' +
                                 '<div class="sc-logo" style="background-color: ' + color + ';">' + initialLetter + '</div>' +
                                 '<div class="sc-info">' +
@@ -259,25 +270,50 @@
                                     '<span class="sym-name">' + name + '</span>' +
                                 '</div>' +
                             '</div>' +
-                            '<div class="sc-right">' +
+                            '<div class="sc-right" style="position:relative;">' +
                                 '<span class="sc-price" id="price-' + sym + '">- ₺</span>' +
                                 '<span class="sc-pct pct flat" id="pct-' + sym + '">%0.00</span>' +
+                                '<span class="rvol-badge" id="rvol-' + sym + '" style="display:none; position:absolute; top:-8px; right:-8px; font-size:10px; background:#fb8c00; color:#fff; padding:2px 4px; border-radius:4px;">🔥 Yüksek Hacim</span>' +
                             '</div>' +
                         '</div>';
             }
             grid.innerHTML = html;
         }
 
-        // Arama Filtresi
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            var q = e.target.value.toLowerCase();
+        var rvolFilterActive = false;
+        function toggleVolFilter() {
+            rvolFilterActive = !rvolFilterActive;
+            var btn = document.getElementById('btnVolFilter');
+            if (rvolFilterActive) {
+                btn.style.backgroundColor = '#fb8c00';
+                btn.style.color = '#fff';
+            } else {
+                btn.style.backgroundColor = 'transparent';
+                btn.style.color = '#fff';
+            }
+            filterStocks();
+        }
+
+        function filterStocks() {
+            var q = document.getElementById('searchInput').value.toLowerCase();
             var cards = document.querySelectorAll('.stock-card');
             cards.forEach(function(c) {
-                var txt = c.textContent.toLowerCase();
-                if (txt.indexOf(q) > -1) { c.style.display = 'flex'; }
-                else { c.style.display = 'none'; }
+                var txt = c.querySelector('.sym').textContent.toLowerCase() + " " + c.querySelector('.sym-name').textContent.toLowerCase();
+                var rvol = parseFloat(c.getAttribute('data-rvol') || "0");
+                
+                var matchesSearch = txt.indexOf(q) > -1;
+                var matchesVol = rvolFilterActive ? (rvol >= 1.5) : true;
+                
+                if (matchesSearch && matchesVol) {
+                    c.style.display = 'flex';
+                } else {
+                    c.style.display = 'none';
+                }
             });
-        });
+        }
+
+        // Arama Filtresi Eventi
+        document.getElementById('searchInput').addEventListener('input', filterStocks);
 
         // Modal Kapatma
         document.getElementById('stockModal').addEventListener('click', function(e) {
@@ -387,6 +423,7 @@
                         var obj = d[sym];
                         var valPct = typeof obj === 'object' ? obj.percent : parseFloat(obj);
                         var valPrice = typeof obj === 'object' ? obj.price : 0;
+                        var rvol = typeof obj === 'object' ? (obj.rvol || 0) : 0;
                         
                         var sign = valPct > 0 ? '▲ ' : (valPct < 0 ? '▼ ' : '');
                         elPct.textContent = sign + Math.abs(valPct).toFixed(2) + '%';
@@ -394,6 +431,15 @@
                         
                         if(valPrice > 0) {
                             elPrice.textContent = new Intl.NumberFormat('tr-TR').format(valPrice) + ' ₺';
+                        }
+                        
+                        var card = document.getElementById('card-' + sym);
+                        if (card) {
+                            card.setAttribute('data-rvol', rvol);
+                        }
+                        var rvolBadge = document.getElementById('rvol-' + sym);
+                        if (rvolBadge) {
+                            rvolBadge.style.display = rvol >= 1.5 ? 'block' : 'none';
                         }
                     }
                 }

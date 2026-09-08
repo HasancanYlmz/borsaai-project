@@ -152,7 +152,7 @@ async def start_mini_app_server():
     async def handle_api_market(request):
         try:
             import yfinance as yf
-            symbols = "AKBNK.IS ALARK.IS ASELS.IS ASTOR.IS BIMAS.IS BRSAN.IS DOAS.IS EKGYO.IS ENKAI.IS EREGL.IS FROTO.IS GARAN.IS GUBRF.IS HEKTS.IS ISCTR.IS KCHOL.IS KONTR.IS KOZAL.IS KRDMD.IS ODAS.IS OYAKC.IS PETKM.IS PGSUS.IS SAHOL.IS SASA.IS SISE.IS TCELL.IS THYAO.IS TOASO.IS TUPRS.IS YKBNK.IS"
+            symbols = "AKBNK.IS ALARK.IS ASELS.IS ASTOR.IS BIMAS.IS BRSAN.IS DOAS.IS EKGYO.IS ENKAI.IS EREGL.IS FROTO.IS GARAN.IS GUBRF.IS HEKTS.IS ISCTR.IS KCHOL.IS KONTR.IS KOZAL.IS KRDMD.IS ODAS.IS OYAKC.IS PETKM.IS PGSUS.IS SAHOL.IS SASA.IS SISE.IS TCELL.IS THYAO.IS TOASO.IS TUPRS.IS YKBNK.IS MGROS.IS SOKM.IS MAVI.IS TAVHL.IS TTRAK.IS CCOLA.IS AEFES.IS ULKER.IS VAKBN.IS HALKB.IS ISMEN.IS DOHOL.IS KOZAA.IS IPEKE.IS AKSEN.IS GWIND.IS ALFAS.IS EUPWR.IS CWENE.IS KORDS.IS"
             
             def fetch_batch():
                 tickers = yf.Tickers(symbols)
@@ -166,10 +166,20 @@ async def start_mini_app_server():
                             pct = ((curr - prev) / prev) * 100
                         else:
                             pct = 0.0
+                            
+                        # RVOL Hesaplama
+                        vol = t.fast_info.get("lastVolume", 1)
+                        avg_vol = t.fast_info.get("threeMonthAverageVolume", 1)
+                        if avg_vol and avg_vol > 0:
+                            rvol = vol / avg_vol
+                        else:
+                            rvol = 0.0
+                            
                         clean_sym = sym.replace(".IS", "")
                         res[clean_sym] = {
                             "percent": round(pct, 2),
-                            "price": round(curr, 2) if curr else 0.0
+                            "price": round(curr, 2) if curr else 0.0,
+                            "rvol": round(rvol, 2)
                         }
                     except:
                         pass

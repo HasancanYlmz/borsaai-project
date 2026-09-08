@@ -102,4 +102,4 @@ def execute_virtual_sell(signal: Signal, portfolio: Portfolio, current_price: De
     log_event("ORDER_ROUTER", f"Sell order executed: {lot_amount} lots of {symbol}.")
     log_event("ORDER_ROUTER", f"Trade result: {pnl:.2f} TRY {durum} ({pnl_percent:.2f}%).")
     
-    return {"symbol": symbol, "net_gelir": net_gelir, "pnl": pnl}
+    return {"symbol": symbol, "net_gelir": net_gelir, "pnl": pnl, "sell_price": float(slippage_price)}
