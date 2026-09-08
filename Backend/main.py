@@ -164,15 +164,18 @@ async def market_trader():
                                 
                                 pnl_pct = ((curr_price - buy_price) / buy_price) * 100
                                 
-                                # Zirveden %2.5 aşağı düşerse (İzleyen Stop) veya doğrudan %2 zarar ederse (Sabit SL) SAT
-                                trailing_stop_price = highest_seen * 0.975 # %2.5 geri çekilme payı
+                                # --- YENİ VUR-KAÇ (DAY TRADER) KURALLARI ---
+                                trailing_stop_price = highest_seen * 0.990 # %1.0 geri çekilme payı
                                 
-                                if curr_price <= trailing_stop_price and pnl_pct > 0:
+                                if pnl_pct >= 2.5:
                                     sig.signal_type = SignalType.SELL
-                                    sig.reason = f"İzleyen Stop (Trailing) tetiklendi. Zirveden %2.5 düştü. Kâr: %{pnl_pct:.2f}"
-                                elif pnl_pct <= -2.0:
+                                    sig.reason = f"Hedef Kâr (Take Profit) Noktasına Ulaşıldı (+%{pnl_pct:.2f})"
+                                elif curr_price <= trailing_stop_price and pnl_pct > 0:
                                     sig.signal_type = SignalType.SELL
-                                    sig.reason = f"Otomatik ZARAR KES tetiklendi (%{pnl_pct:.2f})"
+                                    sig.reason = f"İzleyen Stop (Trailing) tetiklendi. Zirveden %1.0 düştü. Kâr: %{pnl_pct:.2f}"
+                                elif pnl_pct <= -1.25:
+                                    sig.signal_type = SignalType.SELL
+                                    sig.reason = f"Sıkı ZARAR KES tetiklendi (%{pnl_pct:.2f})"
                                 break
                     # -----------------------------------------------
                     
