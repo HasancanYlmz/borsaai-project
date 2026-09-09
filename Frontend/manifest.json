@@ -1,0 +1,16 @@
+{
+  "name": "BorsaAI Terminal",
+  "short_name": "BorsaAI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "description": "Kurumsal Borsa Analiz Terminali",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3665/3665939.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
