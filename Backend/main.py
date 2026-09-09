@@ -182,60 +182,55 @@ async def market_trader():
                 if live_price_raw and live_price_raw > 0:
                     current_price = Decimal(str(live_price_raw))
                     
-                    # --- İZLEYEN STOP VE ZARAR KES (TRAILING STOP & SL) ---
-                    if symbol in active_symbols:
-                        full_trades = get_active_trades()
-                        for t in full_trades:
-                            if t[0] == symbol:
-                                buy_price = float(t[1])
-                                curr_price = float(current_price)
-                                
-                                memory = _GLOBAL_MEMORY.setdefault(symbol, {})
-                                highest_seen = memory.get("highest_seen", buy_price)
-                                
-                                # Eğer fiyat yeni bir zirve yaptıysa, zirveyi güncelle (Kârı takip et)
-                                if curr_price > highest_seen:
-                                    memory["highest_seen"] = curr_price
-                                    highest_seen = curr_price
-                                
-                                pnl_pct = ((curr_price - buy_price) / buy_price) * 100
-                                
-                                # --- İZLEYEN STOP VE ZARAR KES (TREND TAKİBİ) ---
-                                trailing_stop_price = highest_seen * 0.9825 # %1.75 geri çekilme payı
-                                
-                                if curr_price <= trailing_stop_price and pnl_pct > 0:
-                                    sig.signal_type = SignalType.SELL
-                                    sig.reason = f"İzleyen Stop (Trailing) tetiklendi. Zirveden %1.75 düştü. Kâr: %{pnl_pct:.2f}"
-                                elif pnl_pct <= -2.0:
-                                    sig.signal_type = SignalType.SELL
-                                    sig.reason = f"Otomatik ZARAR KES tetiklendi (%{pnl_pct:.2f})"
-                                break
+                    # --- MANUEL PORTFÖY İZLEYEN STOP VE ZARAR KES ---
+                    user_trades = get_active_trades()
+                    user_owns_symbol = False
+                    pnl_pct = 0.0
+                    
+                    for t in user_trades:
+                        if t[0] == symbol:
+                            user_owns_symbol = True
+                            buy_price = float(t[1])
+                            curr_price = float(current_price)
+                            
+                            memory = _GLOBAL_MEMORY.setdefault(symbol, {})
+                            highest_seen = memory.get("highest_seen", buy_price)
+                            
+                            if curr_price > highest_seen:
+                                memory["highest_seen"] = curr_price
+                                highest_seen = curr_price
+                            
+                            pnl_pct = ((curr_price - buy_price) / buy_price) * 100
+                            
+                            trailing_stop_price = highest_seen * 0.9825 # -%1.75
+                            
+                            if curr_price <= trailing_stop_price and pnl_pct > 0:
+                                sig.signal_type = SignalType.SELL
+                                sig.reason = f"İzleyen Stop Kırıldı"
+                            elif pnl_pct <= -2.0:
+                                sig.signal_type = SignalType.SELL
+                                sig.reason = f"Sıkı Zarar Kes Kırıldı"
+                            break
                     # -----------------------------------------------
                     
-                    if sig.signal_type == SignalType.BUY and symbol not in active_symbols:
-                        if is_market_crashing:
-                            log_event("SHIELD", f"{symbol} AL sinyali iptal edildi (BIST100 Kalkanı Devrede).")
-                        elif is_global_panic:
-                            log_event("SHIELD", f"{symbol} AL sinyali iptal edildi (VIX Küresel Panik Radarı).")
-                        elif not check_sector_exposure(symbol, active_symbols):
-                            log_event("SHIELD", f"{symbol} AL sinyali iptal edildi (Sektörel Maruziyet Limiti Aşıldı).")
-                        else:
-                            trade = execute_virtual_order(sig, portfolio, current_price, active_symbols)
-                            if trade:
-                                save_trade(trade.symbol, trade.buy_price, trade.lot_amount)
-                                update_portfolio_cash(portfolio.cash_balance)
-                                active_symbols.append(trade.symbol)
-                                await asyncio.to_thread(send_telegram_message, f"🟢 <b>ALIM YAPILDI:</b> {trade.symbol}\nFiyat: {trade.buy_price:.2f} TL\nLot: {trade.lot_amount}\nNeden: {sig.reason}")
+                    # Sadece NET SİNYALLER, GEREKSİZ MESAJ YOK
+                    # Alarmın tekrarlamaması için kısa hafıza (Throttle)
+                    sig_memory = _GLOBAL_MEMORY.setdefault("last_signals", {})
+                    last_sig_time = sig_memory.get(symbol, 0)
+                    import time
+                    now = time.time()
+                    
+                    if sig.signal_type == SignalType.BUY and not user_owns_symbol:
+                        if not is_market_crashing and not is_global_panic:
+                            if now - last_sig_time > 3600: # Aynı hisseye saatte 1 alarm
+                                sig_memory[symbol] = now
+                                await asyncio.to_thread(send_telegram_message, f"🟢 <b>AL:</b> {symbol}")
                             
-                    elif sig.signal_type == SignalType.SELL and symbol in active_symbols:
-                        full_trades = get_active_trades()
-                        sell_result = execute_virtual_sell(sig, portfolio, current_price, full_trades)
-                        if sell_result:
-                            remove_trade(symbol, sell_price=sell_result.get("sell_price", 0.0), pnl=float(sell_result.get("pnl", 0.0)), reason=sig.reason)
-                            update_portfolio_cash(portfolio.cash_balance)
-                            active_symbols.remove(symbol)
-                            durum = "KAR" if sell_result['pnl'] > 0 else "ZARAR"
-                            await asyncio.to_thread(send_telegram_message, f"🔴 <b>SATIS YAPILDI:</b> {symbol}\nSonuc: {sell_result['pnl']:.2f} TL {durum}\nNeden: {sig.reason}")
+                    elif sig.signal_type == SignalType.SELL and user_owns_symbol:
+                        if now - last_sig_time > 1800:
+                            sig_memory[symbol] = now
+                            durum_text = "KAR" if pnl_pct > 0 else "ZARAR"
+                            await asyncio.to_thread(send_telegram_message, f"🔴 <b>SAT:</b> {symbol} (Guncel: %{pnl_pct:.2f} {durum_text})")
                             
                 await asyncio.sleep(2) # IP Ban koruması
                 

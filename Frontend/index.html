@@ -276,12 +276,12 @@
     <div id="addModal" class="mini-modal">
         <div class="mm-content">
             <div class="mm-title">Manuel Pozisyon Ekle</div>
-            <input type="text" class="mm-input" placeholder="Hisse Sembolü (Örn: THYAO)">
-            <input type="number" class="mm-input" placeholder="Alış Fiyatı (Örn: 305.50)">
-            <input type="number" class="mm-input" placeholder="Lot Miktarı (Örn: 100)">
+            <input type="text" id="addSym" class="mm-input" placeholder="Hisse Sembolü (Örn: THYAO)">
+            <input type="number" id="addPrice" step="0.01" class="mm-input" placeholder="Alış Fiyatı (Örn: 305.50)">
+            <input type="number" id="addLot" class="mm-input" placeholder="Lot Miktarı (Örn: 100)">
             <div class="mm-actions">
                 <button class="btn-secondary" onclick="closeAddModal()">İptal</button>
-                <button class="btn-primary" onclick="alert('Matriks entegrasyonu tamamlandığında backend eklenecek!'); closeAddModal();">Ekle</button>
+                <button class="btn-primary" onclick="submitManualTrade()">Ekle</button>
             </div>
         </div>
     </div>
