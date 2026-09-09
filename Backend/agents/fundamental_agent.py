@@ -44,7 +44,7 @@ def analyze_news_with_ai(symbol: str, news_list: List[str]) -> Dict:
         """
         
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-1.5-flash',
             contents=prompt,
         )
         
