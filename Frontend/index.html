@@ -137,8 +137,11 @@
             <span class="material-icons-round" style="color:var(--text-muted)">search</span>
             <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)">
         </div>
-        <div style="display:flex; gap:10px; margin-bottom:15px; overflow-x:auto;">
+        <div style="display:flex; gap:10px; margin-bottom:15px; overflow-x:auto; padding-bottom:5px;">
             <button id="btnVolFilter" class="btn-modern" onclick="toggleVolFilter()">🔥 Hacim Patlaması</button>
+            <button id="btnAkdFilter" class="btn-modern" onclick="alert('Matriks AKD Verisi Bekleniyor')">🐋 Yabancı (AKD)</button>
+            <button id="btnDevreFilter" class="btn-modern" onclick="alert('Teorik Eşleşme Verisi Bekleniyor')">🧨 Devre Kesenler</button>
+            <button id="btnScalpFilter" class="btn-modern" onclick="alert('Tick/Milisaniye Verisi Bekleniyor')">⚡ Scalp Makası</button>
         </div>
         <div class="section-title" style="margin-top:0;">BIST50 - Canlı Pano</div>
         <div id="stockList"><div class="loading">Piyasa verileri yükleniyor...</div></div>
