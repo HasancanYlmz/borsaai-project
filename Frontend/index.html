@@ -267,7 +267,125 @@
                 <div class="section-title">İLK 5 NET ALICI</div><div style="color:var(--text-muted); font-size:12px; text-align:center;">Veri Yok (-)</div>
                 <div class="section-title">İLK 5 NET SATICI</div><div style="color:var(--text-muted); font-size:12px; text-align:center;">Veri Yok (-)</div>
             </div>
-            <div id="tab-sinyal" class="mt-content">
+            <div id="tab-takas" class="mt-content hidden">
+            <!-- Top Action Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="display: flex; gap: 8px;">
+                    <button style="background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: bold;">GRAFİKSEL</button>
+                    <button style="background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: bold;">↻ YENİLE</button>
+                </div>
+                <div style="text-align: right; line-height: 1.2;">
+                    <div style="font-size: 8px; color: #64748b; font-weight: bold;">FİİLİ DOL.<span style="color: #cbd5e1; margin-left: 5px; font-size: 10px;">2.763.664.192</span></div>
+                    <div style="font-size: 8px; color: #64748b; font-weight: bold;">TOPLAM<span style="color: #cbd5e1; margin-left: 5px; font-size: 10px;">3.059.320.278</span></div>
+                </div>
+            </div>
+
+            <!-- SVG Defs for Gradients -->
+            <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
+                <linearGradient id="gradRed" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#FF2A55" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#FF2A55" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#00FFA3" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#00FFA3" stop-opacity="0"/>
+                </linearGradient>
+            </svg>
+
+            <!-- 6-Grid Cards -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px;">
+                <!-- Card 1 -->
+                <div style="background: #111827; border: 1px solid #1f2937; padding: 10px 8px; border-radius: 8px; position: relative;">
+                    <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 2px;">YABANCI TAKAS ORANI</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px;">%--.--</div>
+                    <svg viewBox="0 0 100 20" style="width: 100%; height: 20px; margin-bottom: 4px;" preserveAspectRatio="none">
+                        <path d="M0,2 Q10,5 20,2 T40,10 T60,15 T80,18 L100,20 L100,20 L0,20 Z" fill="url(#gradRed)"/>
+                        <path d="M0,2 Q10,5 20,2 T40,10 T60,15 T80,18 L100,20" fill="none" stroke="#FF2A55" stroke-width="1.5"/>
+                    </svg>
+                    <div style="font-size: 9px; color: #FF2A55; font-weight: bold;">▼ --.--%</div>
+                    <div style="font-size: 7px; color: #64748b; margin-top: 2px;">Citi + Deutsche + Bofa</div>
+                </div>
+                <!-- Card 2 -->
+                <div style="background: #111827; border: 1px solid #1f2937; padding: 10px 8px; border-radius: 8px; position: relative;">
+                    <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 2px;">FON ORANI</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px;">%--.--</div>
+                    <svg viewBox="0 0 100 20" style="width: 100%; height: 20px; margin-bottom: 4px;" preserveAspectRatio="none">
+                        <path d="M0,18 Q10,15 20,18 T40,10 T60,5 T80,2 L100,0 L100,20 L0,20 Z" fill="url(#gradGreen)"/>
+                        <path d="M0,18 Q10,15 20,18 T40,10 T60,5 T80,2 L100,0" fill="none" stroke="#00FFA3" stroke-width="1.5"/>
+                    </svg>
+                    <div style="font-size: 9px; color: #00FFA3; font-weight: bold;">▲ --.--%</div>
+                    <div style="font-size: 7px; color: #64748b; margin-top: 2px;">Emekli + Yatırım Fonları</div>
+                </div>
+                <!-- Card 3 -->
+                <div style="background: #111827; border: 1px solid #1f2937; padding: 10px 8px; border-radius: 8px; position: relative;">
+                    <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 2px;">FİİLİ DOLAŞIM 🔍</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px;">--.-- Mlr</div>
+                    <svg viewBox="0 0 100 20" style="width: 100%; height: 20px; margin-bottom: 4px;" preserveAspectRatio="none">
+                        <path d="M0,2 Q30,2 40,2 T50,15 T80,18 L100,20 L100,20 L0,20 Z" fill="url(#gradRed)"/>
+                        <path d="M0,2 Q30,2 40,2 T50,15 T80,18 L100,20" fill="none" stroke="#FF2A55" stroke-width="1.5"/>
+                    </svg>
+                    <div style="font-size: 9px; color: #FF2A55; font-weight: bold;">▼ --.--%</div>
+                    <div style="font-size: 7px; color: #64748b; margin-top: 2px;">Dolaşımdaki Pay Adedi</div>
+                </div>
+                <!-- Card 4 -->
+                <div style="background: #111827; border: 1px solid #1f2937; padding: 10px 8px; border-radius: 8px; position: relative;">
+                    <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 2px;">TOPLAM YATIRIMCI 🔍</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px;">---.--B</div>
+                    <svg viewBox="0 0 100 20" style="width: 100%; height: 20px; margin-bottom: 4px;" preserveAspectRatio="none">
+                        <path d="M0,18 Q10,10 20,18 T40,15 T60,10 T80,5 L100,8 L100,20 L0,20 Z" fill="url(#gradGreen)"/>
+                        <path d="M0,18 Q10,10 20,18 T40,15 T60,10 T80,5 L100,8" fill="none" stroke="#00FFA3" stroke-width="1.5"/>
+                    </svg>
+                    <div style="font-size: 9px; color: #00FFA3; font-weight: bold;">▲ --.--%</div>
+                </div>
+                <!-- Card 5 -->
+                <div style="background: #111827; border: 1px solid #1f2937; padding: 10px 8px; border-radius: 8px; position: relative;">
+                    <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 2px;">BİREYSEL YATIRIMCI 🔍</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px;">--.--%</div>
+                    <svg viewBox="0 0 100 20" style="width: 100%; height: 20px; margin-bottom: 4px;" preserveAspectRatio="none">
+                        <path d="M0,15 Q20,20 30,10 T50,5 T70,8 L100,10 L100,20 L0,20 Z" fill="url(#gradGreen)"/>
+                        <path d="M0,15 Q20,20 30,10 T50,5 T70,8 L100,10" fill="none" stroke="#00FFA3" stroke-width="1.5"/>
+                    </svg>
+                    <div style="font-size: 9px; color: #00FFA3; font-weight: bold;">▲ --.--%</div>
+                </div>
+                <!-- Card 6 -->
+                <div style="background: #111827; border: 1px solid #1f2937; padding: 10px 8px; border-radius: 8px; position: relative;">
+                    <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 2px;">KURUMSAL YATIRIMCI 🔍</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px;">--.--%</div>
+                    <svg viewBox="0 0 100 20" style="width: 100%; height: 20px; margin-bottom: 4px;" preserveAspectRatio="none">
+                        <path d="M0,5 Q10,2 20,8 T40,15 T60,20 T80,15 L100,12 L100,20 L0,20 Z" fill="url(#gradRed)"/>
+                        <path d="M0,5 Q10,2 20,8 T40,15 T60,20 T80,15 L100,12" fill="none" stroke="#FF2A55" stroke-width="1.5"/>
+                    </svg>
+                    <div style="font-size: 9px; color: #FF2A55; font-weight: bold;">▼ --.--%</div>
+                </div>
+            </div>
+
+            <!-- Advanced Donut Chart Area -->
+            <div style="background: #111827; border: 1px solid #1f2937; padding: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div style="position: relative; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#4f46e5 0% 32%, #10b981 32% 50%, #f59e0b 50% 64%, #3b82f6 64% 74%, #06b6d4 74% 81%, #475569 81% 100%); display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: #111827; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                        <span style="color: #fff; font-size: 13px; font-weight: bold;">--.-Mlr</span>
+                        <span style="color: #64748b; font-size: 8px;">TOPLAM</span>
+                    </div>
+                </div>
+                <div style="flex: 1; margin-left: 20px; font-size: 10px; color: #cbd5e1; font-weight: 600;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #4f46e5;">● CİTİBANK</span><span>%--.--</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #10b981;">● YAT. FON.</span><span>%--.--</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #f59e0b;">● AK YATIRIM</span><span>%--.--</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #3b82f6;">● DEUTSCHE B.</span><span>%--.--</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #06b6d4;">● EMEKL. FON.</span><span>%--.--</span></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #475569;">● Diğer</span><span>%--.--</span></div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; font-size: 10px; color: #94a3b8; font-weight: bold; margin-bottom: 15px;">
+                İlk 5 Kurum payı <span style="color: #fff;">%--.--</span>
+            </div>
+
+            <div style="background: rgba(245, 158, 11, 0.1); border: 1px dashed #f59e0b; color: #f59e0b; padding: 10px; border-radius: 8px; text-align: center; font-size: 11px; font-weight: bold;">
+                🔗 Matriks IQ Terminali Bekleniyor
+            </div>
+        </div>
+        <div id="tab-sinyal" class="mt-content">
                 <div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px;">Sinyal Yok (-)</div>
             </div>
         </div>
