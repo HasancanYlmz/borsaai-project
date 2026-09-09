@@ -93,10 +93,12 @@ async def handle_api_performance(request):
         for trade in trades:
             symbol, buy_price, lot_amount, buy_time = trade
             try:
-                # Anlık fiyatı yfinance'ten çek
-                ticker = yf.Ticker(f"{symbol}.IS")
-                current_price = ticker.fast_info.get("lastPrice") or ticker.info.get("currentPrice", 0)
-                if not current_price or current_price == 0:
+                # Anlık fiyatı yfinance yerine TradingView'dan çek (Ban korumalı)
+                from sensors.tradingview_sensor import get_tv_analysis
+                tv_data = get_tv_analysis(symbol)
+                if tv_data and tv_data.get("close_price"):
+                    current_price = tv_data["close_price"]
+                else:
                     current_price = buy_price  # Fiyat çekilemezse maliyeti göster
             except:
                 current_price = buy_price
@@ -148,8 +150,18 @@ async def start_mini_app_server():
             
     app.router.add_get('/api/chart', handle_api_chart)
     
+    _MARKET_CACHE = {}
+    _MARKET_CACHE_TIME = 0
+
     # Yeni Tüm Piyasa Yüzdelik Değişimleri
     async def handle_api_market(request):
+        nonlocal _MARKET_CACHE, _MARKET_CACHE_TIME
+        import time
+        
+        current_time = time.time()
+        if current_time - _MARKET_CACHE_TIME < 60 and _MARKET_CACHE:
+            return web.json_response(_MARKET_CACHE)
+            
         try:
             import yfinance as yf
             symbols = "AKBNK.IS ALARK.IS ASELS.IS ASTOR.IS BIMAS.IS BRSAN.IS DOAS.IS EKGYO.IS ENKAI.IS EREGL.IS FROTO.IS GARAN.IS GUBRF.IS HEKTS.IS ISCTR.IS KCHOL.IS KONTR.IS KOZAL.IS KRDMD.IS ODAS.IS OYAKC.IS PETKM.IS PGSUS.IS SAHOL.IS SASA.IS SISE.IS TCELL.IS THYAO.IS TOASO.IS TUPRS.IS YKBNK.IS MGROS.IS SOKM.IS MAVI.IS TAVHL.IS TTRAK.IS CCOLA.IS AEFES.IS ULKER.IS VAKBN.IS HALKB.IS ISMEN.IS DOHOL.IS KOZAA.IS IPEKE.IS AKSEN.IS GWIND.IS ALFAS.IS EUPWR.IS CWENE.IS KORDS.IS"
@@ -186,9 +198,12 @@ async def start_mini_app_server():
                 return res
                 
             data = await asyncio.to_thread(fetch_batch)
+            if data:
+                _MARKET_CACHE = data
+                _MARKET_CACHE_TIME = current_time
             return web.json_response(data)
         except:
-            return web.json_response({})
+            return web.json_response(_MARKET_CACHE if _MARKET_CACHE else {})
             
     app.router.add_get('/api/market', handle_api_market)
     

@@ -3,506 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BorsaAI Terminal</title>
+    <title>Canlı Borsa Botu</title>
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- İkonlar -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0B0E14; color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        ::-webkit-scrollbar { width: 0; }
+        :root {
+            --bg-dark: #0d1117; --bg-card: #161b22; --bg-nav: #010409;
+            --text-main: #c9d1d9; --text-muted: #8b949e;
+            --up-color: #2ea043; --down-color: #f85149;
+            --up-bg: rgba(46, 160, 67, 0.15); --down-bg: rgba(248, 81, 73, 0.15);
+            --accent: #58a6ff; --border: #30363d;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 70px; overflow-x: hidden; }
 
         /* HEADER */
-        .header { padding: 14px 16px; background: #151924; border-bottom: 1px solid #1f2937; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        .logo { font-size: 20px; font-weight: bold; color: #fff; }
-        .logo span { color: #3b82f6; }
-        .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9ca3af; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .app-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background-color: var(--bg-dark); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        .app-title { font-size: 18px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;}
+        .online-badge { width: 8px; height: 8px; background: var(--up-color); border-radius: 50%; box-shadow: 0 0 8px var(--up-color);}
 
-        /* TABS */
-        .tabs { display: flex; background: #151924; border-bottom: 1px solid #1f2937; flex-shrink: 0; overflow-x: auto; }
-        .tab-btn { flex: 1; padding: 12px 8px; font-size: 12px; font-weight: 600; color: #6b7280; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
-        .tab-btn.active { color: #fff; border-bottom-color: #3b82f6; }
+        /* BOTTOM NAV */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background-color: var(--bg-nav); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); font-size: 11px; font-weight: 500; gap: 4px; width: 25%; cursor: pointer; }
+        .nav-item.active { color: var(--accent); }
 
-        /* CONTENT */
-        .main { flex: 1; overflow-y: auto; position: relative; }
-        .tab { display: none; padding: 16px; }
-        .tab.active { display: block; }
+        /* VIEWS */
+        .view-section { display: none; padding: 15px; animation: fadeIn 0.2s ease; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* SEARCH */
-        .search-box { position: relative; margin-bottom: 14px; }
-        .search-box input { width: 100%; padding: 11px 14px 11px 38px; background: #151924; border: 1px solid #1f2937; border-radius: 10px; color: #fff; font-size: 14px; outline: none; }
-        .search-box input:focus { border-color: #3b82f6; }
-        .search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; }
-        .section-title { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+        /* COMMON ELEMENTS */
+        .search-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .search-bar input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 14px; }
+        .btn-modern { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn-modern.active-filter { background: rgba(251, 140, 0, 0.2); border-color: #fb8c00; color: #fb8c00; }
 
-        /* STOCK LIST (YATAY) */
-        .stock-grid { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
-        .stock-card { background: #151924; border: 1px solid #1f2937; border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background-color 0.2s; }
-        .stock-card:active { background: #1e2433; border-color: #3b82f6; }
-        .sc-left { display: flex; align-items: center; gap: 12px; }
-        .sc-logo { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #fff; }
-        .sc-info { display: flex; flex-direction: column; }
-        .sc-info .sym { font-weight: 700; font-size: 16px; color: #fff; }
-        .sc-info .sym-name { font-size: 12px; color: #6b7280; margin-top: 2px; }
-        
-        .sc-right { display: flex; flex-direction: column; align-items: flex-end; }
-        .sc-price { font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 4px; }
-        .sc-pct { font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
-        .pct.up { color: #22c55e; background: rgba(34,197,94,0.1); }
-        .pct.down { color: #ef4444; background: rgba(239,68,68,0.1); }
-        .pct.flat { color: #6b7280; background: rgba(107,114,128,0.1); }
+        /* STOCK LIST */
+        .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .stock-row:last-child { border-bottom: none; }
+        .sr-left { display: flex; align-items: center; gap: 12px; }
+        .sr-logo { width: 40px; height: 40px; border-radius: 10px; background: #222; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 14px; }
+        .sr-info { display: flex; flex-direction: column; }
+        .sr-sym { font-weight: 700; font-size: 15px; color: white; }
+        .sr-name { font-size: 12px; color: var(--text-muted); margin-top: 2px;}
+        .sr-right { display: flex; flex-direction: column; align-items: flex-end; }
+        .sr-price { font-weight: 600; font-size: 15px; color: white; }
+        .sr-pct { font-size: 12px; font-weight: 600; margin-top: 4px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px; }
+        .pct-up { background: var(--up-bg); color: var(--up-color); }
+        .pct-down { background: var(--down-bg); color: var(--down-color); }
+        .pct-flat { background: #333; color: #aaa; }
+        .fire-badge { font-size: 10px; background: #fb8c00; color: white; padding: 2px 4px; border-radius: 4px; margin-left: 6px; }
 
         /* PORTFOLIO CARD */
-        .balance-card { background: #151924; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-        .balance-label { font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
-        .balance-amount { font-size: 26px; font-weight: 700; color: #fff; }
-        .balance-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; margin-left: 8px; }
-        .badge-green { color: #22c55e; background: rgba(34,197,94,0.1); }
-        .badge-red { color: #ef4444; background: rgba(239,68,68,0.1); }
-        .balance-row { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1f2937; }
-        .balance-sub { font-size: 11px; color: #6b7280; text-transform: uppercase; }
-        .balance-val { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-top: 2px; }
+        .port-card { background: linear-gradient(135deg, #161b22 0%, #0d1117 100%); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+        .pc-title { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 8px;}
+        .pc-value { font-size: 28px; font-weight: 800; color: white; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;}
+        .pc-pct { font-size: 13px; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
+        .pc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);}
+        .pc-item-lbl { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .pc-item-val { font-size: 14px; font-weight: 600; color: white; }
 
-        /* POSITION CARD */
-        .pos-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .pos-card:active { background: #1e2433; }
-        .pos-sym { font-weight: 700; font-size: 16px; color: #fff; }
-        .pos-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
-        .pos-price { font-weight: 700; font-size: 14px; color: #fff; text-align: right; }
-        .pos-pnl { font-size: 12px; font-weight: 600; text-align: right; margin-top: 2px; }
-        .text-green { color: #22c55e; }
-        .text-red { color: #ef4444; }
-        .text-blue { color: #3b82f6; }
-        .empty-msg { text-align: center; padding: 32px 16px; }
-        .empty-msg p { color: #6b7280; font-size: 14px; }
-        .empty-msg small { color: #374151; font-size: 12px; display: block; margin-top: 6px; }
+        /* POSITIONS */
+        .section-title { font-size: 14px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; margin-top: 20px;}
+        .pos-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 10px; }
+        .pos-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .pos-sym { font-size: 16px; font-weight: 700; color: white; }
+        .pos-pnl { font-size: 14px; font-weight: 700; }
+        .pos-details { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
+        .pos-actions { margin-top: 12px; display: flex; gap: 10px; }
+        .btn-sell { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid var(--down-color); background: rgba(248,81,73,0.1); color: var(--down-color); font-weight: 600; font-size: 11px; cursor: pointer; }
 
-        /* SIGNAL CARD */
-        .sig-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; margin-bottom: 10px; cursor: pointer; }
-        .sig-card:active { background: #1e2433; }
-        .sig-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .sig-sym { font-weight: 700; color: #fff; }
-        .sig-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid; margin-left: 6px; }
-        .sig-badge.buy { color: #22c55e; border-color: #22c55e; background: rgba(34,197,94,0.1); }
-        .sig-badge.sell { color: #ef4444; border-color: #ef4444; background: rgba(239,68,68,0.1); }
-        .sig-badge.hold { color: #6b7280; border-color: #6b7280; background: rgba(107,114,128,0.1); }
-        .sig-time { font-size: 11px; color: #6b7280; }
-        .sig-reason { font-size: 11px; color: #9ca3af; line-height: 1.4; }
+        /* MODALS */
+        .fs-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 2000; display: none; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .fs-modal.open { display: flex; transform: translateX(0); }
+        .modal-header { padding: 15px 20px; display: flex; align-items: center; gap: 15px; background: var(--bg-nav); border-bottom: 1px solid var(--border); }
+        .back-btn { background: transparent; border: none; color: white; display: flex; align-items: center; cursor: pointer; }
+        .mh-logo { width: 36px; height: 36px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; }
+        .mh-info { flex: 1; }
+        .mh-sym { font-size: 16px; font-weight: 700; color: white; }
+        .mh-name { font-size: 11px; color: var(--text-muted); }
+        .mh-price-area { padding: 15px 20px; background: var(--bg-nav); }
+        .mh-price { font-size: 28px; font-weight: 800; color: white; display: flex; align-items: center; gap: 10px;}
+        .modal-tabs { display: flex; overflow-x: auto; background: var(--bg-nav); border-bottom: 1px solid var(--border); padding: 0 10px; }
+        .modal-tabs::-webkit-scrollbar { display: none; }
+        .mt-tab { padding: 12px 15px; color: var(--text-muted); font-size: 12px; font-weight: 600; white-space: nowrap; border-bottom: 2px solid transparent; cursor: pointer; }
+        .mt-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .modal-body { flex: 1; overflow-y: auto; padding: 15px; background: var(--bg-dark); }
+        .mt-content { display: none; }
+        .mt-content.active { display: block; animation: fadeIn 0.2s; }
 
-        /* MODAL */
-        #stockModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0B0E14; z-index: 999; display: none; flex-direction: column; }
-        #stockModal.open { display: flex; }
-        .modal-header { padding: 14px 16px; background: #151924; border-bottom: 1px solid #1f2937; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-        .back-btn { background: #1f2937; border: none; color: #9ca3af; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 16px; }
-        .modal-sym { font-size: 20px; font-weight: 700; color: #fff; }
-        .modal-body { flex: 1; overflow-y: auto; padding: 16px; }
+        /* DEPTH TABLE */
+        .depth-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+        .depth-table th { color: var(--text-muted); padding: 8px 4px; border-bottom: 1px solid var(--border); font-weight: 600; }
+        .depth-table td { padding: 8px 4px; color: white; font-weight: 500; position: relative; z-index: 1;}
+        .depth-table td.vol-cell::before { content: ''; position: absolute; top: 2px; bottom: 2px; right: 0; z-index: -1; border-radius: 2px; }
+        .depth-table td.bid-vol::before { background: var(--up-bg); width: 40%; }
+        .depth-table td.ask-vol::before { background: var(--down-bg); width: 60%; left: 0; right: auto;}
 
-        /* CHART */
-        .chart-box { border: 1px solid #1f2937; border-radius: 10px; overflow: hidden; height: 260px; margin-bottom: 10px; background: #151924; }
-        .chart-box iframe { width: 100%; height: 100%; border: none; }
-        
-        /* TIMEFRAME FILTERS */
-        .timeframe-filters { display: flex; gap: 6px; margin-bottom: 14px; }
-        .tf-btn { flex: 1; padding: 6px 0; background: #151924; border: 1px solid #1f2937; border-radius: 6px; color: #6b7280; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-        .tf-btn.active { background: rgba(59,130,246,0.1); border-color: #3b82f6; color: #3b82f6; }
-        .tf-btn:active { background: #1e2433; }
-
-        /* FUNDAMENTALS GRID */
-        .fund-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-        .fund-card { background: #151924; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; }
-        .fund-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-        .fund-val { font-size: 15px; font-weight: 700; color: #fff; }
-
-        /* NEWS */
-        .news-title { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; padding-bottom: 8px; border-bottom: 1px solid #1f2937; margin-bottom: 10px; }
-        .news-item { background: #0d111a; border: 1px solid #1f2937; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-        .news-text { font-size: 12px; color: #d1d5db; line-height: 1.4; }
-        .news-src { font-size: 10px; color: #6b7280; margin-top: 4px; }
-        .loading-txt { text-align: center; padding: 20px; color: #3b82f6; font-size: 13px; font-weight: 600; }
+        /* ADD MODAL */
+        .mini-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 3000; display: none; align-items: center; justify-content: center; }
+        .mini-modal.open { display: flex; }
+        .mm-content { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 90%; max-width: 350px; padding: 20px; }
+        .mm-title { font-size: 16px; font-weight: 700; color: white; margin-bottom: 15px; }
+        .mm-input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; outline: none; font-size: 14px; }
+        .mm-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-primary { background: var(--up-color); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; flex: 1; cursor:pointer;}
+        .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-weight: 600; flex: 1; cursor:pointer;}
+        .loading { text-align: center; color: var(--text-muted); font-size: 12px; padding: 20px; }
     </style>
 </head>
 <body>
-
-    <!-- HEADER -->
-    <header class="header">
-        <div class="logo">Borsa<span>AI</span></div>
-        <div class="status"><div class="dot"></div>Online</div>
-    </header>
-
-    <!-- TABS -->
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('piyasa', this)">PİYASA</button>
-        <button class="tab-btn" onclick="switchTab('portfoy', this)">PORTFÖYÜM</button>
-        <button class="tab-btn" onclick="switchTab('sinyaller', this)">SİNYALLER</button>
+    <div class="app-header">
+        <div class="app-title"><span class="material-icons-round" style="color:var(--accent)">show_chart</span>BorsaAI Terminal</div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); font-weight:600;"><div class="online-badge"></div> Aktif</div>
     </div>
 
-    <!-- MAIN -->
-    <div class="main">
-
-        <!-- PİYASA TAB -->
-        <div id="tab-piyasa" class="tab active">
-            <div class="search-box">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
-                <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)">
-            </div>
-            <div style="margin-bottom:15px;">
-                <button id="btnVolFilter" class="tf-btn" style="width:auto; padding:6px 12px; font-size:12px; border:1px solid #374151;" onclick="toggleVolFilter()">🔥 Hacim Patlaması Filtresi (RVOL > 1.5)</button>
-            </div>
-            <div class="section-title">Popüler Hisseler (BIST30)</div>
-                <div class="stock-grid" id="stockGrid">
-                    <!-- Dinamik olarak JS ile doldurulacak -->
-                </div>
+    <div id="view-piyasa" class="view-section active">
+        <div class="search-bar">
+            <span class="material-icons-round" style="color:var(--text-muted)">search</span>
+            <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)">
         </div>
-
-        <!-- PORTFÖY TAB -->
-        <div id="tab-portfoy" class="tab">
-            <div class="balance-card">
-                <div class="balance-label">Sanal Kasa (Başlangıç: ₺10.000)</div>
-                <div style="display:flex;align-items:baseline;gap:8px;">
-                    <div class="balance-amount" id="totalEquity">₺10.000</div>
-                    <span class="balance-badge badge-green" id="pnlBadge">+₺0,00</span>
-                </div>
-                <div class="balance-row">
-                    <div><div class="balance-sub">Nakit</div><div class="balance-val" id="cashBalance">₺10.000</div></div>
-                    <div><div class="balance-sub">Hisse Değeri</div><div class="balance-val" id="stockValue">₺0</div></div>
-                    <div style="text-align:right"><div class="balance-sub">Toplam K/Z</div><div class="balance-val text-green" id="totalPnl">₺0,00</div></div>
-                </div>
-            </div>
-            <div class="section-title">Açık Pozisyonlar</div>
-            <div id="portfolioList">
-                <div class="empty-msg"><p>Yükleniyor...</p></div>
-            </div>
+        <div style="display:flex; gap:10px; margin-bottom:15px; overflow-x:auto;">
+            <button id="btnVolFilter" class="btn-modern" onclick="toggleVolFilter()">🔥 Hacim Patlaması</button>
         </div>
-
-        <!-- SİNYALLER TAB -->
-        <div id="tab-sinyaller" class="tab">
-            <div class="section-title">Son AI Kararları</div>
-            <div id="signalsList">
-                <div class="empty-msg"><p>Sinyal bekleniyor...</p><small>Sistem piyasa saatlerinde aktif tarama yapar.</small></div>
-            </div>
-        </div>
-
-        <!-- HİSSE DETAY MODALI -->
-        <div id="stockModal">
-            <div class="modal-header">
-                <button class="back-btn" onclick="closeModal()">‹</button>
-                <div class="modal-sym" id="modalSymbol">-</div>
-            </div>
-            <div class="modal-body">
-                <div class="chart-box">
-                    <canvas id="stockChart"></canvas>
-                </div>
-                <div class="timeframe-filters" id="timeframeFilters">
-                    <button class="tf-btn" onclick="fetchChartData('1G')">1G</button>
-                    <button class="tf-btn" onclick="fetchChartData('1H')">1H</button>
-                    <button class="tf-btn active" onclick="fetchChartData('1A')">1A</button>
-                    <button class="tf-btn" onclick="fetchChartData('3A')">3A</button>
-                    <button class="tf-btn" onclick="fetchChartData('1Y')">1Y</button>
-                </div>
-                <div id="loadingTxt" class="loading-txt">Veriler çekiliyor...</div>
-                <div class="fund-grid" id="fundGrid" style="display:none">
-                    <div class="fund-card"><div class="fund-label">F/K Oranı</div><div class="fund-val" id="fPE">-</div></div>
-                    <div class="fund-card"><div class="fund-label">PD/DD Oranı</div><div class="fund-val" id="fPB">-</div></div>
-                    <div class="fund-card"><div class="fund-label">Yabancı/Fon Takası</div><div class="fund-val text-blue" id="fInst">-%</div></div>
-                    <div class="fund-card"><div class="fund-label">Anlık Hacim</div><div class="fund-val" id="fVol">Normal</div></div>
-                </div>
-                <div id="newsSection" style="display:none">
-                    <div class="news-title">Son Haberler & KAP Bildirimleri</div>
-                    <div id="newsList"></div>
-                </div>
-            </div>
-        </div>
-
+        <div class="section-title" style="margin-top:0;">BIST50 - Canlı Pano</div>
+        <div id="stockList"><div class="loading">Piyasa verileri yükleniyor...</div></div>
     </div>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <div id="view-portfoy" class="view-section">
+        <div class="port-card">
+            <div class="pc-title">Sanal Kasa (Başlangıç: ₺10.000)</div>
+            <div class="pc-value" id="portTotalValue">₺0,00 <span class="pc-pct pct-flat" id="portTotalPct">+%0.00</span></div>
+            <div class="pc-grid">
+                <div><div class="pc-item-lbl">NAKİT</div><div class="pc-item-val" id="portCash">₺0,00</div></div>
+                <div><div class="pc-item-lbl">HİSSE DEĞERİ</div><div class="pc-item-val" id="portEquity">₺0,00</div></div>
+            </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="section-title" style="margin-top:0;">Açık Pozisyonlar</div>
+            <button class="btn-modern" style="background:var(--up-bg); color:var(--up-color); border:none;" onclick="openAddModal()">
+                <span class="material-icons-round" style="font-size:16px;">add</span> Manuel Alım
+            </button>
+        </div>
+        <div id="activePositions"><div class="loading">Portföy yükleniyor...</div></div>
+    </div>
+
+    <div id="view-radar" class="view-section">
+        <div class="section-title" style="margin-top:0;">Yapay Zeka Sinyalleri</div>
+        <div id="signalList"><div class="loading">Sinyaller taranıyor...</div></div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchView('piyasa', this)"><span class="material-icons-round">waterfall_chart</span>Piyasa</div>
+        <div class="nav-item" onclick="switchView('radar', this)"><span class="material-icons-round">radar</span>Radar</div>
+        <div class="nav-item" onclick="switchView('portfoy', this)"><span class="material-icons-round">account_balance_wallet</span>Portföy</div>
+        <div class="nav-item"><span class="material-icons-round">settings</span>Ayarlar</div>
+    </div>
+
+    <div id="stockModal" class="fs-modal">
+        <div class="modal-header">
+            <button class="back-btn" onclick="closeStockModal()"><span class="material-icons-round">arrow_back</span></button>
+            <div class="mh-logo" id="mhLogo">TH</div>
+            <div class="mh-info"><div class="mh-sym" id="mhSym">THYAO</div><div class="mh-name" id="mhName">Türk Hava Yolları</div></div>
+            <span class="material-icons-round" style="color:var(--text-muted)">star_border</span>
+        </div>
+        <div class="mh-price-area">
+            <div class="mh-price" id="mhPrice">0,00 ₺ <span class="sr-pct pct-flat" id="mhPct">%0.00</span></div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:5px;">Canlı Veri (Gecikmeli olabilir)</div>
+        </div>
+        <div class="modal-tabs">
+            <div class="mt-tab active" onclick="switchModalTab('ozet', this)">ÖZET</div>
+            <div class="mt-tab" onclick="switchModalTab('derinlik', this)">DERİNLİK</div>
+            <div class="mt-tab" onclick="switchModalTab('akd', this)">AKD</div>
+            <div class="mt-tab" onclick="switchModalTab('sinyal', this)">SİNYAL</div>
+        </div>
+        <div class="modal-body">
+            <div id="tab-ozet" class="mt-content active">
+                <div class="pc-grid" style="margin-top:20px; border:none; padding:0;">
+                    <div style="background:var(--bg-card); padding:12px; border-radius:8px;"><div class="pc-item-lbl">F/K ORANI</div><div class="pc-item-val" id="fPE">-</div></div>
+                    <div style="background:var(--bg-card); padding:12px; border-radius:8px;"><div class="pc-item-lbl">PD/DD</div><div class="pc-item-val" id="fPB">-</div></div>
+                </div>
+            </div>
+            <div id="tab-derinlik" class="mt-content">
+                <div style="text-align:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:15px; font-size:12px; color:#fb8c00;">
+                    <span class="material-icons-round" style="font-size:16px; vertical-align:middle;">link</span> Matriks Bağlantısı Bekleniyor
+                </div>
+                <table class="depth-table">
+                    <thead><tr><th style="text-align:left">EMİR</th><th style="text-align:left">LOT</th><th style="text-align:center">ALIŞ | SATIŞ</th><th style="text-align:right">LOT</th><th style="text-align:right">EMİR</th></tr></thead>
+                    <tbody id="depthBody"></tbody>
+                </table>
+            </div>
+            <div id="tab-akd" class="mt-content">
+                <div style="text-align:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:15px; font-size:12px; color:#fb8c00;">
+                    <span class="material-icons-round" style="font-size:16px; vertical-align:middle;">link</span> Matriks Bağlantısı Bekleniyor
+                </div>
+                <div class="section-title">İLK 5 NET ALICI</div><div style="color:var(--text-muted); font-size:12px; text-align:center;">Veri Yok (-)</div>
+                <div class="section-title">İLK 5 NET SATICI</div><div style="color:var(--text-muted); font-size:12px; text-align:center;">Veri Yok (-)</div>
+            </div>
+            <div id="tab-sinyal" class="mt-content">
+                <div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px;">Sinyal Yok (-)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD POSITION MODAL -->
+    <div id="addModal" class="mini-modal">
+        <div class="mm-content">
+            <div class="mm-title">Manuel Pozisyon Ekle</div>
+            <input type="text" class="mm-input" placeholder="Hisse Sembolü (Örn: THYAO)">
+            <input type="number" class="mm-input" placeholder="Alış Fiyatı (Örn: 305.50)">
+            <input type="number" class="mm-input" placeholder="Lot Miktarı (Örn: 100)">
+            <div class="mm-actions">
+                <button class="btn-secondary" onclick="closeAddModal()">İptal</button>
+                <button class="btn-primary" onclick="alert('Matriks entegrasyonu tamamlandığında backend eklenecek!'); closeAddModal();">Ekle</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // --- TAB ---
-        function switchTab(id, btn) {
-            closeModal(); // Tab değiştiğinde açık olan detay penceresini kapat
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab-' + id).classList.add('active');
-            btn.classList.add('active');
+        const COMPANY_NAMES = { 'AKBNK':'Akbank', 'ALARK':'Alarko Holding', 'ASELS':'Aselsan', 'ASTOR':'Astor Enerji', 'BIMAS':'BİM Mağazalar', 'BRSAN':'Borusan Boru', 'DOAS':'Doğuş Otomotiv', 'EKGYO':'Emlak Konut', 'ENKAI':'Enka İnşaat', 'EREGL':'Erdemir', 'FROTO':'Ford Otosan', 'GARAN':'Garanti BBVA', 'GUBRF':'Gübretaş', 'HEKTS':'Hektaş', 'ISCTR':'İş Bankası (C)', 'KCHOL':'Koç Holding', 'KONTR':'Kontrolmatik', 'KOZAL':'Koza Altın', 'KRDMD':'Kardemir (D)', 'ODAS':'Odaş Elektrik', 'OYAKC':'Oyak Çimento', 'PETKM':'Petkim', 'PGSUS':'Pegasus', 'SAHOL':'Sabancı Holding', 'SASA':'Sasa Polyester', 'SISE':'Şişecam', 'TCELL':'Turkcell', 'THYAO':'Türk Hava Yolları', 'TOASO':'Tofaş', 'TUPRS':'Tüpraş', 'YKBNK':'Yapı Kredi', 'MGROS':'Migros', 'SOKM':'Şok Marketler', 'MAVI':'Mavi Giyim', 'TAVHL':'TAV Havalimanları', 'TTRAK':'Türk Traktör', 'CCOLA':'Coca-Cola', 'AEFES':'Anadolu Efes', 'ULKER':'Ülker', 'VAKBN':'VakıfBank', 'HALKB':'Halkbank', 'ISMEN':'İş Yatırım', 'DOHOL':'Doğan Holding', 'KOZAA':'Koza Madencilik', 'IPEKE':'İpek Doğal Enerji', 'AKSEN':'Aksa Enerji', 'GWIND':'Galata Wind', 'ALFAS':'Alfa Solar', 'EUPWR':'Europower', 'CWENE':'CW Enerji', 'KORDS':'Kordsa' };
+        const colors = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#3949ab', '#00acc1'];
+        function getColor(sym) { let hash = 0; for(let i=0; i<sym.length; i++) hash = sym.charCodeAt(i) + ((hash<<5)-hash); return colors[Math.abs(hash)%colors.length]; }
+        function fmt(n) { return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY'}).format(n); }
+
+        function switchView(viewId, el) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+            el.classList.add('active');
         }
 
-        // --- ŞİRKET BİLGİLERİ (ISIM VE SEMBOL) ---
-        const COMPANY_NAMES = {
-            'AKBNK': 'Akbank T.A.Ş.', 'ALARK': 'Alarko Holding', 'ASELS': 'Aselsan',
-            'ASTOR': 'Astor Enerji', 'BIMAS': 'BİM Birleşik Mağazalar', 'BRSAN': 'Borusan Boru',
-            'DOAS': 'Doğuş Otomotiv', 'EKGYO': 'Emlak Konut GYO', 'ENKAI': 'Enka İnşaat',
-            'EREGL': 'Erdemir', 'FROTO': 'Ford Otosan', 'GARAN': 'Garanti BBVA',
-            'GUBRF': 'Gübretaş', 'HEKTS': 'Hektaş', 'ISCTR': 'İş Bankası (C)',
-            'KCHOL': 'Koç Holding', 'KONTR': 'Kontrolmatik', 'KOZAL': 'Koza Altın',
-            'KRDMD': 'Kardemir (D)', 'ODAS': 'Odaş Elektrik', 'OYAKC': 'Oyak Çimento',
-            'PETKM': 'Petkim', 'PGSUS': 'Pegasus', 'SAHOL': 'Sabancı Holding',
-            'SASA': 'Sasa Polyester', 'SISE': 'Şişecam', 'TCELL': 'Turkcell',
-            'THYAO': 'Türk Hava Yolları', 'TOASO': 'Tofaş', 'TUPRS': 'Tüpraş',
-            'YKBNK': 'Yapı Kredi',
-            // BIST50 İlaveleri
-            'MGROS': 'Migros Ticaret', 'SOKM': 'Şok Marketler', 'MAVI': 'Mavi Giyim',
-            'TAVHL': 'TAV Havalimanları', 'TTRAK': 'Türk Traktör', 'CCOLA': 'Coca-Cola İçecek',
-            'AEFES': 'Anadolu Efes', 'ULKER': 'Ülker Bisküvi', 'VAKBN': 'VakıfBank',
-            'HALKB': 'Halkbank', 'ISMEN': 'İş Yatırım', 'DOHOL': 'Doğan Holding',
-            'KOZAA': 'Koza Madencilik', 'IPEKE': 'İpek Doğal Enerji', 'AKSEN': 'Aksa Enerji',
-            'GWIND': 'Galata Wind', 'ALFAS': 'Alfa Solar Enerji', 'EUPWR': 'Europower Enerji',
-            'CWENE': 'CW Enerji', 'KORDS': 'Kordsa Teknik Tekstil'
-        };
-
-        // --- LİSTE OLUŞTURUCU VE LOGO RENGİ ---
-        function getLogoColor(sym) {
-            const colors = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#3949ab', '#00897b', '#c0ca33', '#f4511e', '#5e35b1'];
-            return colors[sym.charCodeAt(0) % colors.length];
-        }
-
-        function renderMarketGrid() {
-            var grid = document.getElementById('stockGrid');
-            var html = '';
-            for (var sym in COMPANY_NAMES) {
-                var name = COMPANY_NAMES[sym];
-                var color = getLogoColor(sym);
-                var initialLetter = sym.substring(0, 2);
-                html += '<div class="stock-card" id="card-' + sym + '" data-rvol="0" onclick="openModal(\'' + sym + '\')">' +
-                            '<div class="sc-left">' +
-                                '<div class="sc-logo" style="background-color: ' + color + ';">' + initialLetter + '</div>' +
-                                '<div class="sc-info">' +
-                                    '<span class="sym">' + sym + '</span>' +
-                                    '<span class="sym-name">' + name + '</span>' +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="sc-right" style="position:relative;">' +
-                                '<span class="sc-price" id="price-' + sym + '">- ₺</span>' +
-                                '<span class="sc-pct pct flat" id="pct-' + sym + '">%0.00</span>' +
-                                '<span class="rvol-badge" id="rvol-' + sym + '" style="display:none; position:absolute; top:-8px; right:-8px; font-size:10px; background:#fb8c00; color:#fff; padding:2px 4px; border-radius:4px;">🔥 Yüksek Hacim</span>' +
-                            '</div>' +
-                        '</div>';
-            }
-            grid.innerHTML = html;
-        }
-
-        var rvolFilterActive = false;
+        let rvolActive = false;
         function toggleVolFilter() {
-            rvolFilterActive = !rvolFilterActive;
-            var btn = document.getElementById('btnVolFilter');
-            if (rvolFilterActive) {
-                btn.style.backgroundColor = '#fb8c00';
-                btn.style.color = '#fff';
-            } else {
-                btn.style.backgroundColor = 'transparent';
-                btn.style.color = '#fff';
-            }
-            filterStocks();
+            rvolActive = !rvolActive;
+            const btn = document.getElementById('btnVolFilter');
+            rvolActive ? btn.classList.add('active-filter') : btn.classList.remove('active-filter');
+            filterPiyasa();
         }
 
-        function filterStocks() {
-            var q = document.getElementById('searchInput').value.toLowerCase();
-            var cards = document.querySelectorAll('.stock-card');
-            cards.forEach(function(c) {
-                var txt = c.querySelector('.sym').textContent.toLowerCase() + " " + c.querySelector('.sym-name').textContent.toLowerCase();
-                var rvol = parseFloat(c.getAttribute('data-rvol') || "0");
-                
-                var matchesSearch = txt.indexOf(q) > -1;
-                var matchesVol = rvolFilterActive ? (rvol >= 1.5) : true;
-                
-                if (matchesSearch && matchesVol) {
-                    c.style.display = 'flex';
-                } else {
-                    c.style.display = 'none';
-                }
+        function filterPiyasa() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            document.querySelectorAll('.stock-row').forEach(row => {
+                const txt = row.querySelector('.sr-sym').innerText.toLowerCase() + " " + row.querySelector('.sr-name').innerText.toLowerCase();
+                const rvol = parseFloat(row.getAttribute('data-rvol') || "0");
+                const mSearch = txt.includes(q);
+                const mVol = rvolActive ? (rvol >= 1.5) : true;
+                row.style.display = (mSearch && mVol) ? 'flex' : 'none';
             });
         }
+        document.getElementById('searchInput').addEventListener('input', filterPiyasa);
 
-        // Arama Filtresi Eventi
-        document.getElementById('searchInput').addEventListener('input', filterStocks);
+        let depthHtml = '';
+        for(let i=0; i<10; i++) depthHtml += `<tr><td style="text-align:left">-</td><td style="text-align:left">-</td><td style="text-align:center; font-weight:700;"><span style="color:var(--up-color)">-</span> | <span style="color:var(--down-color)">-</span></td><td style="text-align:right">-</td><td style="text-align:right">-</td></tr>`;
+        document.getElementById('depthBody').innerHTML = depthHtml;
 
-        // Modal Kapatma
-        document.getElementById('stockModal').addEventListener('click', function(e) {
-            if (e.target === this) { closeModal(); }
-        });
-
-        // SAYFA YÜKLENDİĞİNDE
-        renderMarketGrid();
-
-        // HARİCİ TIKLAMALARDA MODAL KAPAT
-        window.addEventListener('click', function(e) {
-            if (e.target == document.getElementById('stockModal')) {
-                closeModal();
-            }
-        });
-
-        // GRAFİK ÇİZİCİ
-        var currentChart = null;
-        function renderChart(labels, data, symbol) {
-            var ctx = document.getElementById('stockChart').getContext('2d');
-            if (currentChart) { currentChart.destroy(); }
-            
-            var isUp = data[data.length-1] >= data[0];
-            var color = isUp ? '#22c55e' : '#ef4444';
-            var bg = isUp ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
-
-            currentChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: symbol,
-                        data: data,
-                        borderColor: color,
-                        backgroundColor: bg,
-                        borderWidth: 2,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    interaction: { intersect: false, mode: 'index' },
-                    scales: {
-                        x: { display: true, ticks: { color: '#6b7280', maxTicksLimit: 6 }, grid: { display: false } },
-                        y: { display: true, ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, position: 'right' }
-                    }
-                }
-            });
-        }
-
-        // --- MODAL ---
-        function fetchChartData(period) {
-            document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            var symbol = document.getElementById('modalSymbol').textContent;
-            fetch('/api/chart?symbol=' + symbol + '&period=' + period)
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.data && data.data.length > 0) { renderChart(data.labels, data.data, symbol); }
-                });
-        }
-
-        function openModal(symbol) {
-            document.getElementById('modalSymbol').textContent = symbol;
-            document.getElementById('loadingTxt').style.display = 'block';
-            document.getElementById('fundGrid').style.display = 'none';
-            document.getElementById('newsSection').style.display = 'none';
-            document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tf-btn')[2].classList.add('active');
-            if (currentChart) { currentChart.destroy(); currentChart = null; }
+        function openStockModal(sym, price, pctStr, isUp) {
+            document.getElementById('mhSym').innerText = sym;
+            document.getElementById('mhName').innerText = COMPANY_NAMES[sym] || sym;
+            document.getElementById('mhLogo').innerText = sym.substring(0,2);
+            document.getElementById('mhLogo').style.background = getColor(sym);
+            document.getElementById('mhPrice').innerHTML = price + ' ₺ <span class="sr-pct '+(isUp?'pct-up':'pct-down')+'">'+pctStr+'</span>';
             document.getElementById('stockModal').classList.add('open');
-            fetch('/api/stock?symbol=' + symbol)
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    document.getElementById('loadingTxt').style.display = 'none';
-                    var f = data.fundamentals || {};
-                    if (f.chart_data && f.chart_data.length > 0) { renderChart(f.chart_labels, f.chart_data, symbol); }
-                    document.getElementById('fPE').textContent = f.pe_ratio > 0 ? f.pe_ratio.toFixed(2) : '-';
-                    document.getElementById('fPB').textContent = f.pb_ratio > 0 ? f.pb_ratio.toFixed(2) : '-';
-                    document.getElementById('fInst').textContent = '%' + (f.inst_holdings_pct || 0).toFixed(2);
-                    document.getElementById('fundGrid').style.display = 'grid';
-                    var nl = document.getElementById('newsList');
-                    nl.innerHTML = (data.news || []).map(n => '<div class="news-item"><div class="news-text">' + n + '</div></div>').join('');
-                    document.getElementById('newsSection').style.display = 'block';
-                });
+            fetch('/api/stock?symbol=' + sym).then(r=>r.json()).then(data=>{
+                let f = data.fundamentals || {};
+                document.getElementById('fPE').innerText = f.pe_ratio > 0 ? f.pe_ratio.toFixed(2) : '-';
+                document.getElementById('fPB').innerText = f.pb_ratio > 0 ? f.pb_ratio.toFixed(2) : '-';
+            }).catch(()=>{});
         }
-
-        function closeModal() { document.getElementById('stockModal').classList.remove('open'); }
-
-        // --- PORTFÖY & SİNYAL VERİLERİ ---
-        function fmt(n) {
-            return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY'}).format(n);
+        function closeStockModal() { document.getElementById('stockModal').classList.remove('open'); }
+        function switchModalTab(tabId, el) {
+            document.querySelectorAll('.mt-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.mt-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            el.classList.add('active');
         }
+        function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+        function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
 
         function loadData() {
-            // Hisselerin anlık fiyatları ve yüzdelik değişimleri
-            fetch('/api/market').then(function(r){return r.json();}).then(function(d){
-                for (var sym in d) {
-                    var elPct = document.getElementById('pct-' + sym);
-                    var elPrice = document.getElementById('price-' + sym);
-                    if (elPct && elPrice) {
-                        var obj = d[sym];
-                        var valPct = typeof obj === 'object' ? obj.percent : parseFloat(obj);
-                        var valPrice = typeof obj === 'object' ? obj.price : 0;
-                        var rvol = typeof obj === 'object' ? (obj.rvol || 0) : 0;
-                        
-                        var sign = valPct > 0 ? '▲ ' : (valPct < 0 ? '▼ ' : '');
-                        elPct.textContent = sign + Math.abs(valPct).toFixed(2) + '%';
-                        elPct.className = 'sc-pct pct ' + (valPct > 0 ? 'up' : (valPct < 0 ? 'down' : 'flat'));
-                        
-                        if(valPrice > 0) {
-                            elPrice.textContent = new Intl.NumberFormat('tr-TR').format(valPrice) + ' ₺';
-                        }
-                        
-                        var card = document.getElementById('card-' + sym);
-                        if (card) {
-                            card.setAttribute('data-rvol', rvol);
-                        }
-                        var rvolBadge = document.getElementById('rvol-' + sym);
-                        if (rvolBadge) {
-                            rvolBadge.style.display = rvol >= 1.5 ? 'block' : 'none';
-                        }
-                    }
+            fetch('/api/market').then(r=>r.json()).then(d => {
+                let html = '';
+                for(let sym in COMPANY_NAMES) {
+                    const obj = d[sym] || {price:0, percent:0, rvol:0};
+                    const isUp = obj.percent > 0;
+                    const isDown = obj.percent < 0;
+                    const pctCls = isUp ? 'pct-up' : (isDown ? 'pct-down' : 'pct-flat');
+                    const sign = isUp ? '▲' : (isDown ? '▼' : '');
+                    const pctStr = sign + Math.abs(obj.percent).toFixed(2) + '%';
+                    const fire = obj.rvol >= 1.5 ? '<span class="fire-badge">🔥 Hacim</span>' : '';
+                    html += `<div class="stock-row" data-rvol="${obj.rvol}" onclick="openStockModal('${sym}', '${obj.price}', '${pctStr}', ${isUp})">
+                        <div class="sr-left"><div class="sr-logo" style="background:${getColor(sym)}">${sym.substring(0,2)}</div><div class="sr-info"><div class="sr-sym">${sym}${fire}</div><div class="sr-name">${COMPANY_NAMES[sym]}</div></div></div>
+                        <div class="sr-right"><div class="sr-price">${obj.price > 0 ? obj.price.toFixed(2) : '-'} ₺</div><div class="sr-pct ${pctCls}">${pctStr}</div></div></div>`;
                 }
-            }).catch(function(){});
+                document.getElementById('stockList').innerHTML = html;
+                filterPiyasa();
+            }).catch(()=>{});
 
-            // Bakiye ve Sinyaller
-            fetch('/api/data').then(function(r){return r.json();}).then(function(d){
-                document.getElementById('cashBalance').textContent = fmt(d.cash);
-                // Sinyaller
-                var sl = document.getElementById('signalsList');
-                if (d.signals && d.signals.length > 0) {
-                    sl.innerHTML = d.signals.map(function(s) {
-                        var t = s.type ? s.type.toUpperCase() : '';
-                        var cls = (t === 'AL' || t === 'BUY') ? 'buy' : ((t === 'SAT' || t === 'SELL') ? 'sell' : 'hold');
-                        return '<div class="sig-card" onclick="openModal(\'' + s.symbol + '\')">' +
-                            '<div class="sig-header"><div><span class="sig-sym">' + s.symbol + '</span>' +
-                            '<span class="sig-badge ' + cls + '">' + s.type + '</span></div>' +
-                            '<span class="sig-time">' + s.timestamp + '</span></div>' +
-                            '<div class="sig-reason">' + s.reason + '</div></div>';
-                    }).join('');
-                }
-            }).catch(function(){});
+            fetch('/api/performance').then(r=>r.json()).then(d => {
+                document.getElementById('portTotalValue').innerHTML = fmt(d.total_portfolio_value) + ` <span class="pc-pct ${d.total_pnl>0?'pct-up':(d.total_pnl<0?'pct-down':'pct-flat')}">${d.total_pnl>0?'+':''}${fmt(d.total_pnl)}</span>`;
+                document.getElementById('portCash').innerText = fmt(d.total_cash);
+                document.getElementById('portEquity').innerText = fmt(d.total_portfolio_value - d.total_cash);
+                let ph = '';
+                if(d.positions && d.positions.length > 0) {
+                    d.positions.forEach(p => {
+                        const isUp = p.pnl_pct > 0;
+                        ph += `<div class="pos-card"><div class="pos-top"><div class="pos-sym">${p.symbol} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color)">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
+                        <div class="pos-details"><div>Maliyet: <b>₺${p.buy_price.toFixed(2)}</b></div><div>Anlık: <b>₺${p.current_price.toFixed(2)}</b></div></div>
+                        <div class="pos-actions"><button class="btn-sell" onclick="alert('Matriks ile Manuel Satış Backend\\'e Eklenecek!')">Pozisyon Kapat</button></div></div>`;
+                    });
+                } else { ph = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Açık pozisyon yok.</div>'; }
+                document.getElementById('activePositions').innerHTML = ph;
+            }).catch(()=>{});
 
-            // Performans (K/Z)
-            fetch('/api/performance').then(function(r){return r.json();}).then(function(d){
-                var positions = d.positions || [];
-                var totalPnl = d.total_pnl || 0;
-                var stockVal = positions.reduce(function(s,p){return s+p.value;}, 0);
-                var equity = parseFloat(document.getElementById('cashBalance').textContent.replace(/[^\d,]/g,'').replace(',','.')) || 0;
-
-                fetch('/api/data').then(function(r){return r.json();}).then(function(base){
-                    var total = base.cash + stockVal;
-                    document.getElementById('totalEquity').textContent = fmt(total);
-                    document.getElementById('stockValue').textContent = fmt(stockVal);
-                    var pnl = total - 10000;
-                    var pct = (pnl / 10000 * 100).toFixed(2);
-                    var badge = document.getElementById('pnlBadge');
-                    badge.textContent = (pnl >= 0 ? '+' : '') + fmt(pnl) + ' (' + (pnl>=0?'+':'') + pct + '%)';
-                    badge.className = 'balance-badge ' + (pnl >= 0 ? 'badge-green' : 'badge-red');
-                    var pnlEl = document.getElementById('totalPnl');
-                    pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + fmt(totalPnl);
-                    pnlEl.className = 'balance-val ' + (totalPnl >= 0 ? 'text-green' : 'text-red');
-
-                    var pl = document.getElementById('portfolioList');
-                    if (positions.length === 0) {
-                        pl.innerHTML = '<div class="empty-msg"><p>Henüz açık pozisyon yok.</p><small>AI AL sinyali verince otomatik işlenir.</small></div>';
-                    } else {
-                        pl.innerHTML = positions.map(function(p) {
-                            var sign = p.pnl >= 0 ? '+' : '';
-                            var cls = p.pnl >= 0 ? 'text-green' : 'text-red';
-                            return '<div class="pos-card" onclick="openModal(\'' + p.symbol + '\')">' +
-                                '<div><div class="pos-sym">' + p.symbol + '</div>' +
-                                '<div class="pos-sub">' + p.lot_amount + ' Lot · Alış ₺' + p.buy_price.toFixed(2) + '</div></div>' +
-                                '<div><div class="pos-price">₺' + p.current_price.toFixed(2) + '</div>' +
-                                '<div class="pos-pnl ' + cls + '">' + sign + '₺' + p.pnl.toFixed(2) + ' (' + sign + p.pnl_pct.toFixed(2) + '%)</div></div></div>';
-                        }).join('');
-                    }
-                });
-            }).catch(function(){});
+            fetch('/api/data').then(r=>r.json()).then(d => {
+                let sh = '';
+                if(d.signals && d.signals.length > 0) {
+                    d.signals.forEach(s => {
+                        const t = s.type ? s.type.toUpperCase() : '';
+                        const cls = (t === 'AL' || t === 'BUY') ? 'up-color' : ((t === 'SAT' || t === 'SELL') ? 'down-color' : 'text-muted');
+                        sh += `<div class="pos-card"><div class="pos-top"><div class="pos-sym">${s.symbol}</div><div class="pos-pnl" style="color:var(--${cls});">${s.type}</div></div><div class="pos-details"><div>Tarih: <b>${s.timestamp}</b></div></div><div style="font-size:11px; color:var(--text-muted); margin-top:10px;">${s.reason}</div></div>`;
+                    });
+                } else { sh = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Sinyal yok.</div>'; }
+                document.getElementById('signalList').innerHTML = sh;
+            }).catch(()=>{});
         }
-
-        loadData();
-        setInterval(loadData, 15000);
+        loadData(); setInterval(loadData, 15000); 
     </script>
 </body>
 </html>
