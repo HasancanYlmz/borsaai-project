@@ -95,7 +95,7 @@ async def handle_api_performance(request):
             try:
                 # Anlık fiyatı yfinance'ten çek
                 ticker = yf.Ticker(f"{symbol}.IS")
-                current_price = ticker.fast_info.get("last_price") or ticker.info.get("currentPrice", 0)
+                current_price = ticker.fast_info.get("lastPrice") or ticker.info.get("currentPrice", 0)
                 if not current_price or current_price == 0:
                     current_price = buy_price  # Fiyat çekilemezse maliyeti göster
             except:
