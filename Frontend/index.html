@@ -411,7 +411,18 @@
                         if(t === 'HOLD') t = 'TUT';
                         const txtCls = (t === 'AL') ? 'up-color' : ((t === 'SAT') ? 'down-color' : 'text-muted');
                         const boxCls = (t === 'AL') ? 'up-box' : ((t === 'SAT') ? 'down-box' : '');
-                        sh += `<div class="signal-card ${boxCls}" data-type="${t}"><div class="signal-top"><div class="signal-sym">${s.symbol}</div><div class="signal-type ${txtCls}">${t}</div></div><div class="signal-date">Tarih: ${s.timestamp}</div><div class="signal-reason">${s.reason}</div></div>`;
+                        sh += `<div class="signal-card ${boxCls}" data-type="${t}"><div class="signal-top"><div class="signal-sym">${s.symbol}</div><div class="signal-type ${txtCls}">${t}</div></div><div class="signal-date">Tarih: ${s.timestamp}</div><div class="signal-reason">${s.reason}</div>
+        <!-- SKOR BARI -->
+        <div style="margin-top: 15px; width: 100%;">
+            <div style="position: relative; width: 100%; height: 6px; background: linear-gradient(to right, #FF2A55, #475569, #00FFA3); border-radius: 4px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+                <div style="position: absolute; left: ${s.confidence || 50}%; top: -4px; width: 14px; height: 14px; background: #ffffff; border-radius: 50%; box-shadow: 0 0 8px rgba(255,255,255,0.9); transform: translateX(-50%); transition: left 0.5s ease-out;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 6px; font-weight: 600; letter-spacing: 0.5px;">
+                <span style="color: #FF2A55; text-shadow: 0 0 5px rgba(255,42,85,0.4);">SAT</span>
+                <span>TUT</span>
+                <span style="color: #00FFA3; text-shadow: 0 0 5px rgba(0,255,163,0.4);">AL</span>
+            </div>
+        </div></div>`;
                     });
                 } else { sh = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Sinyal yok.</div>'; }
                 document.getElementById('signalList').innerHTML = sh;
