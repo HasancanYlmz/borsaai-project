@@ -149,60 +149,55 @@ async def start_mini_app_server():
             return web.json_response({"data": [], "labels": []})
             
     
-async def handle_api_portfolio_add(request):
-    try:
-        data = await request.json()
-        symbol = data.get('symbol', '').upper()
-        price = float(data.get('price', 0))
-        lot = int(data.get('lot', 0))
-        
-        if not symbol or price <= 0 or lot <= 0:
-            from aiohttp import web
-            return web.json_response({'error': 'Gecersiz parametreler'}, status=400)
-            
-        import sys
-        import os
-        sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-        from core.database import save_trade
-        save_trade(symbol, price, lot)
-        from aiohttp import web
-        return web.json_response({'success': True, 'msg': f'{symbol} eklendi.'})
-    except Exception as e:
-        from aiohttp import web
-        return web.json_response({'error': str(e)}, status=500)
 
-async def handle_api_portfolio_close(request):
-    try:
-        data = await request.json()
-        symbol = data.get('symbol', '').upper()
-        sell_price = float(data.get('price', 0))
-        
-        from aiohttp import web
-        if not symbol or sell_price <= 0:
-            return web.json_response({'error': 'Gecersiz parametreler'}, status=400)
-            
-        import sys
-        import os
-        sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-        from core.database import get_active_trades, remove_trade
-        trades = get_active_trades()
-        for t in trades:
-            if t[0] == symbol:
-                buy_price = float(t[1])
-                lot = int(t[2])
-                pnl = (sell_price - buy_price) * lot
-                remove_trade(symbol, sell_price, pnl, 'Manuel Kapatildi')
-                return web.json_response({'success': True, 'msg': f'{symbol} kapatildi. PnL: {pnl:.2f}'})
-                
-        return web.json_response({'error': 'Acik pozisyon bulunamadi'}, status=404)
-    except Exception as e:
-        from aiohttp import web
-        return web.json_response({'error': str(e)}, status=500)
+    
+    async def handle_api_portfolio_add(request):
+        try:
+            data = await request.json()
+            symbol = data.get('symbol', '').upper()
+            price = float(data.get('price', 0))
+            lot = int(data.get('lot', 0))
+            if not symbol or price <= 0 or lot <= 0:
+                from aiohttp import web
+                return web.json_response({'error': 'Gecersiz parametreler'}, status=400)
+            import sys, os
+            sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+            from core.database import save_trade
+            save_trade(symbol, price, lot)
+            from aiohttp import web
+            return web.json_response({'success': True, 'msg': f'{symbol} eklendi.'})
+        except Exception as e:
+            from aiohttp import web
+            return web.json_response({'error': str(e)}, status=500)
+
+    async def handle_api_portfolio_close(request):
+        try:
+            data = await request.json()
+            symbol = data.get('symbol', '').upper()
+            sell_price = float(data.get('price', 0))
+            from aiohttp import web
+            if not symbol or sell_price <= 0:
+                return web.json_response({'error': 'Gecersiz parametreler'}, status=400)
+            import sys, os
+            sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+            from core.database import get_active_trades, remove_trade
+            trades = get_active_trades()
+            for t in trades:
+                if t[0] == symbol:
+                    buy_price = float(t[1])
+                    lot = int(t[2])
+                    pnl = (sell_price - buy_price) * lot
+                    remove_trade(symbol, sell_price, pnl, 'Manuel Kapatildi')
+                    return web.json_response({'success': True, 'msg': f'{symbol} kapatildi. PnL: {pnl:.2f}'})
+            return web.json_response({'error': 'Acik pozisyon bulunamadi'}, status=404)
+        except Exception as e:
+            from aiohttp import web
+            return web.json_response({'error': str(e)}, status=500)
 
     app.router.add_get('/api/chart', handle_api_chart)
     app.router.add_post('/api/portfolio/add', handle_api_portfolio_add)
     app.router.add_post('/api/portfolio/close', handle_api_portfolio_close)
-    
+
     _MARKET_CACHE = {}
     _MARKET_CACHE_TIME = 0
 
