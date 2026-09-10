@@ -129,6 +129,38 @@ async def handle_api_performance(request):
         log_event("MINI_APP", f"Performance API Hatasi: {e}", level="ERROR")
         return web.json_response({"error": str(e)}, status=500)
 
+
+async def handle_tradingview_webhook(request):
+    try:
+        data = await request.json()
+        
+        # Basit bir guvenlik onlemi
+        if data.get("secret") != "BorsaAI_Gizli_Anahtar_2026":
+            return web.json_response({"status": "error", "message": "Unauthorized"}, status=401)
+            
+        symbol = data.get("symbol")
+        action = data.get("action")
+        price = data.get("price")
+        
+        if not symbol or not action:
+            return web.json_response({"status": "error", "message": "Missing fields"}, status=400)
+            
+        # Gelen sinyali logla
+        log_event("WEBHOOK", f"TradingView Sinyali Alindi: {action} {symbol} @ {price}")
+        
+        # Burada Yapay Zeka filtresi tetiklenecek
+        # Simdilik sadece Telegrama haber verelim (Test asamasindayiz)
+        message = f"🚨 <b>TRADINGVIEW SİNYALİ</b> 🚨\n\n📌 <b>Hisse:</b> {symbol}\n🎯 <b>Yön:</b> {action}\n💰 <b>Fiyat:</b> {price} TL\n\n<i>Yapay zeka haber onayı bekleniyor...</i>"
+        
+        from interfaces.telegram_bot import send_telegram_message
+        asyncio.create_task(send_telegram_message(message))
+        
+        return web.json_response({"status": "success", "message": "Sinyal isleme alindi"})
+        
+    except Exception as e:
+        log_event("WEBHOOK_ERROR", f"Hata: {str(e)}", level="ERROR")
+        return web.json_response({"status": "error", "message": str(e)}, status=500)
+
 async def start_mini_app_server():
     """Start the Aiohttp web server on port 8080."""
     app = web.Application()
@@ -195,6 +227,7 @@ async def start_mini_app_server():
             return web.json_response({'error': str(e)}, status=500)
 
     app.router.add_get('/api/chart', handle_api_chart)
+        app.router.add_post('/api/webhook/tv', handle_tradingview_webhook)
     app.router.add_post('/api/portfolio/add', handle_api_portfolio_add)
     app.router.add_post('/api/portfolio/close', handle_api_portfolio_close)
 
