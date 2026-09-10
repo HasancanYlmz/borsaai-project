@@ -227,7 +227,7 @@ async def start_mini_app_server():
             return web.json_response({'error': str(e)}, status=500)
 
     app.router.add_get('/api/chart', handle_api_chart)
-        app.router.add_post('/api/webhook/tv', handle_tradingview_webhook)
+    app.router.add_post('/api/webhook/tv', handle_tradingview_webhook)
     app.router.add_post('/api/portfolio/add', handle_api_portfolio_add)
     app.router.add_post('/api/portfolio/close', handle_api_portfolio_close)
 
