@@ -1,4 +1,4 @@
-import random
+﻿import random
 import string
 import sys
 import os
@@ -11,7 +11,7 @@ from sensors.yahoo_finance import get_market_context, calculate_dynamic_rvol
 from agents.committee import evaluate_stock_committee
 from agents.fundamental_agent import analyze_news_with_ai
 from agents.risk_agent import evaluate_trade_risk
-from agents.dominance import detect_spoofing_and_dominance
+from quant.dominance import detect_spoofing_and_dominance
 from core.signal_generator import generate_signal
 from simulator.order_router import execute_virtual_order
 from core.database import init_db, save_trade, get_active_symbols, update_portfolio_cash, get_portfolio
@@ -40,13 +40,13 @@ def random_akd():
     return AKD(random_symbol())
 
 def random_news():
-    sentiments = ['POZİTİF', 'NEGATİF', 'NÖTR']
-    # simple mock: empty list triggers NÖTR
+    sentiments = ['POZÄ°TÄ°F', 'NEGATÄ°F', 'NÃ–TR']
+    # simple mock: empty list triggers NÃ–TR
     if random.random() < 0.3:
         return []
     else:
         # generate dummy strings containing some keywords
-        positive = ['kar', 'büyüme', 'rekor']
+        positive = ['kar', 'bÃ¼yÃ¼me', 'rekor']
         negative = ['zarar', 'dava', 'ceza']
         words = []
         for _ in range(random.randint(1, 3)):
@@ -96,3 +96,4 @@ for i in range(200):
         failed += 1
 
 print(f"Stress test completed: {passed} passed, {failed} failed.")
+

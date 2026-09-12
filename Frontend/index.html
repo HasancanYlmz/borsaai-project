@@ -6,7 +6,7 @@
     <title>BorsaAI Terminal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         :root { --bg-dark: #0f172a; --bg-nav: rgba(15, 23, 42, 0.85); --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #3b82f6; --neon-green: #00ffa3; --neon-cyan: #00e5ff; --up-color: #00ffa3; --up-bg: rgba(0, 255, 163, 0.1); --down-color: #ff2a55; --down-bg: rgba(255, 42, 85, 0.1); --border: #334155; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -188,6 +188,7 @@
 
         function closeStockModal() { document.getElementById('stockModal').classList.remove('open'); }
 
+        let currentChart = null;
         function openStockModal(sym, price, pctStr, isUp) {
             document.getElementById('mhSym').innerText = sym;
             document.getElementById('mhName').innerText = COMPANY_NAMES[sym] || sym;
@@ -196,25 +197,45 @@
             document.getElementById('mhPrice').innerHTML = price + ' ₺ <span class="sr-pct '+(isUp?'pct-up':'pct-down')+'">'+pctStr+'</span>';
             document.getElementById('stockModal').classList.add('open');
             
-            if (typeof TradingView !== 'undefined') {
-                document.getElementById('tv-chart').innerHTML = '';
-                new TradingView.widget({
-                  "autosize": true,
-                  "symbol": "BIST:" + sym,
-                  "interval": "D",
-                  "timezone": "Europe/Istanbul",
-                  "theme": "dark",
-                  "style": "1",
-                  "locale": "tr",
-                  "enable_publishing": false,
-                  "backgroundColor": "rgba(15, 23, 42, 1)",
-                  "gridColor": "rgba(30, 41, 59, 1)",
-                  "hide_top_toolbar": true,
-                  "hide_legend": true,
-                  "save_image": false,
-                  "container_id": "tv-chart"
+            const container = document.getElementById('tv-chart');
+            container.innerHTML = '<div class="loading">Grafik verisi yükleniyor...</div>';
+            
+            fetch('/api/history?symbol=' + sym)
+            .then(r => r.json())
+            .then(res => {
+                if(res.status !== 'success' || !res.data || res.data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:30px; color:#ff2a55;">Veri çekilemedi.</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                
+                if (currentChart) {
+                    currentChart.remove();
+                }
+                
+                const chart = LightweightCharts.createChart(container, {
+                    width: container.clientWidth,
+                    height: container.clientHeight,
+                    layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#94a3b8' },
+                    grid: { vertLines: { color: 'rgba(51, 65, 85, 0.4)' }, horzLines: { color: 'rgba(51, 65, 85, 0.4)' } },
+                    rightPriceScale: { borderVisible: false },
+                    timeScale: { borderVisible: false, fixLeftEdge: true, fixRightEdge: true },
                 });
-            }
+                
+                const areaSeries = chart.addAreaSeries({
+                    lineColor: isUp ? '#00ffa3' : '#ff2a55',
+                    topColor: isUp ? 'rgba(0, 255, 163, 0.4)' : 'rgba(255, 42, 85, 0.4)',
+                    bottomColor: isUp ? 'rgba(0, 255, 163, 0.0)' : 'rgba(255, 42, 85, 0.0)',
+                    lineWidth: 2,
+                });
+                
+                areaSeries.setData(res.data);
+                chart.timeScale().fitContent();
+                currentChart = chart;
+            }).catch(e => {
+                container.innerHTML = '<div style="text-align:center; padding:30px; color:#ff2a55;">Bağlantı Hatası</div>';
+            });
         }
 
         function sellPosition(symbol) {

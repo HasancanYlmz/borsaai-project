@@ -160,6 +160,44 @@ async def api_sell(request):
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)})
 
+
+async def api_history(request):
+    try:
+        symbol = request.query.get("symbol")
+        if not symbol:
+            return web.json_response({"status": "error", "message": "Symbol eksik"})
+            
+        import yfinance as yf
+        import asyncio
+        import pandas as pd
+        
+        # BIST sembolleri yfinance'ta .IS uzantilidir
+        ticker = f"{symbol}.IS"
+        
+        def fetch_data():
+            df = yf.download(ticker, period="3mo", interval="1d", progress=False)
+            if df.empty:
+                return []
+            
+            # Create a list of dicts: {time: 'YYYY-MM-DD', value: close_price}
+            data = []
+            for date, row in df.iterrows():
+                # Handling pandas MultiIndex if it occurs
+                close_val = row["Close"].iloc[0] if isinstance(row["Close"], pd.Series) else row["Close"]
+                if pd.isna(close_val):
+                    continue
+                data.append({
+                    "time": date.strftime("%Y-%m-%d"),
+                    "value": float(close_val)
+                })
+            return data
+            
+        data = await asyncio.to_thread(fetch_data)
+        return web.json_response({"status": "success", "data": data})
+    except Exception as e:
+        log_event("API_ERROR", f"/api/history hatasi: {e}")
+        return web.json_response({"status": "error", "message": str(e)})
+
 async def api_market(request):
     return web.json_response({
         "bist100_value": 9850.50,
@@ -178,6 +216,7 @@ async def start_mini_app_server():
     app.router.add_get('/api/data', api_data)
     app.router.add_get('/api/performance', api_performance)
     app.router.add_get('/api/market', api_market)
+    app.router.add_get('/api/history', api_history)
     app.router.add_post('/api/sell', api_sell)
     
     app.router.add_get('/', index_handler)
