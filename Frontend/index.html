@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -149,15 +149,14 @@
     </div>
 
     <script>
-        // GLOBAL ERROR HANDLER FOR MOBILE
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             document.getElementById('errorLog').style.display = 'block';
-            document.getElementById('errorLog').innerHTML += ERROR:  <br>;
+            document.getElementById('errorLog').innerHTML += "ERROR: " + msg + "<br>";
             return false;
         };
         window.addEventListener("unhandledrejection", function(event) {
             document.getElementById('errorLog').style.display = 'block';
-            document.getElementById('errorLog').innerHTML += PROMISE ERROR:  <br>;
+            document.getElementById('errorLog').innerHTML += "PROMISE ERROR: " + event.reason + "<br>";
         });
 
         const COMPANY_NAMES = { 'AKBNK':'Akbank', 'ALARK':'Alarko Holding', 'ASELS':'Aselsan', 'ASTOR':'Astor Enerji', 'BIMAS':'BİM Mağazalar', 'BRSAN':'Borusan Boru', 'DOAS':'Doğuş Otomotiv', 'EKGYO':'Emlak Konut', 'ENKAI':'Enka İnşaat', 'EREGL':'Erdemir', 'FROTO':'Ford Otosan', 'GARAN':'Garanti BBVA', 'GUBRF':'Gübretaş', 'HEKTS':'Hektaş', 'ISCTR':'İş Bankası (C)', 'KCHOL':'Koç Holding', 'KONTR':'Kontrolmatik', 'KOZAL':'Koza Altın', 'KRDMD':'Kardemir (D)', 'ODAS':'Odaş Elektrik', 'OYAKC':'Oyak Çimento', 'PETKM':'Petkim', 'PGSUS':'Pegasus', 'SAHOL':'Sabancı Holding', 'SASA':'Sasa Polyester', 'SISE':'Şişecam', 'TCELL':'Turkcell', 'THYAO':'Türk Hava Yolları', 'TOASO':'Tofaş', 'TUPRS':'Tüpraş', 'YKBNK':'Yapı Kredi' };
@@ -251,31 +250,31 @@
                     const sign = isUp ? '+' : (isDown ? '-' : '');
                     const pctStr = sign + Math.abs(obj.percent).toFixed(2) + '%';
                     const fire = obj.rvol >= 1.5 ? '<span class="fire-badge">🔥 Hacim</span>' : '';
-                    html += <div class="stock-row" onclick="openStockModal('', '', '', )">
-                        <div class="sr-left"><div class="sr-logo" style="background:"></div><div class="sr-info"><div class="sr-sym"></div><div class="sr-name"></div></div></div>
-                        <div class="sr-right"><div class="sr-price"> ₺</div><div class="sr-pct "></div></div></div>;
+                    html += `<div class="stock-row" onclick="openStockModal('${sym}', '${obj.price}', '${pctStr}', ${isUp})">
+                        <div class="sr-left"><div class="sr-logo" style="background:${getColor(sym)}">${sym.substring(0,2)}</div><div class="sr-info"><div class="sr-sym">${sym}${fire}</div><div class="sr-name">${COMPANY_NAMES[sym]}</div></div></div>
+                        <div class="sr-right"><div class="sr-price">${obj.price > 0 ? obj.price.toFixed(2) : '-'} ₺</div><div class="sr-pct ${pctCls}">${pctStr}</div></div></div>`;
                 }
                 document.getElementById('stockList').innerHTML = html;
                 filterPiyasa();
-            }).catch(e => { console.error(e); document.getElementById('stockList').innerHTML = "Market Hatası: " + e; });
+            }).catch(e => { console.error(e); document.getElementById('stockList').innerHTML = "Market Hatasi: " + e; });
 
             fetch('/api/performance')
             .then(r => r.json())
             .then(d => {
-                document.getElementById('portTotalValue').innerHTML = fmt(d.total_portfolio_value) +  <span class="pc-pct "></span>;
+                document.getElementById('portTotalValue').innerHTML = fmt(d.total_portfolio_value) + ` <span class="pc-pct ${d.total_pnl>0?'pct-up':(d.total_pnl<0?'pct-down':'pct-flat')}">${d.total_pnl>0?'+':''}${fmt(d.total_pnl)}</span>`;
                 document.getElementById('portCash').innerText = fmt(d.total_cash);
                 document.getElementById('portEquity').innerText = fmt(d.total_portfolio_value - d.total_cash);
                 let ph = '';
                 if(d.positions && d.positions.length > 0) {
                     d.positions.forEach(p => {
                         const isUp = p.pnl_pct > 0;
-                        ph += <div class="pos-card"><div class="pos-top"><div class="pos-sym"> <span style="font-size:11px; color:var(--text-muted); font-weight:normal;"> Lot</span></div><div class="pos-pnl" style="color:var(---color)"> (%)</div></div>
-                        <div class="pos-details"><div>Maliyet: <b></b></div><div>Anlık: <b></b></div></div>
-                        <div class="pos-actions"><button class="btn-sell" onclick="sellPosition('')">Pozisyon Kapat</button></div></div>;
+                        ph += `<div class="pos-card"><div class="pos-top"><div class="pos-sym">${p.symbol} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color)">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
+                        <div class="pos-details"><div>Maliyet: <b>${fmt(p.buy_price)}</b></div><div>Anlik: <b>${fmt(p.current_price)}</b></div></div>
+                        <div class="pos-actions"><button class="btn-sell" onclick="sellPosition('${p.symbol}')">Pozisyon Kapat</button></div></div>`;
                     });
-                } else { ph = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Açık pozisyon yok.</div>'; }
+                } else { ph = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Acik pozisyon yok.</div>'; }
                 document.getElementById('activePositions').innerHTML = ph;
-            }).catch(e => { console.error(e); document.getElementById('activePositions').innerHTML = "Performans Hatası: " + e; });
+            }).catch(e => { console.error(e); document.getElementById('activePositions').innerHTML = "Performans Hatasi: " + e; });
 
             fetch('/api/data')
             .then(r => r.json())
@@ -287,7 +286,7 @@
                         if(t === 'BUY') t = 'AL';
                         if(t === 'SELL') t = 'SAT';
                         const txtCls = (t === 'AL') ? 'up-color' : ((t === 'SAT') ? 'down-color' : 'text-muted');
-                        sh += <div class="pos-card" style="border-left: 4px solid var(---color);"><div class="pos-top"><div class="pos-sym"></div><div class="pos-pnl" style="color:var(---color)"></div></div><div class="pos-details" style="display:block; margin-bottom:5px;">Neden: </div><div style="font-size:10px; color:var(--text-muted); text-align:right;"></div></div>;
+                        sh += `<div class="pos-card" style="border-left: 4px solid var(--${txtCls.replace('-color','')}-color);"><div class="pos-top"><div class="pos-sym">${s.symbol}</div><div class="pos-pnl" style="color:var(--${txtCls.replace('-color','')}-color)">${t}</div></div><div class="pos-details" style="display:block; margin-bottom:5px;">Neden: ${s.reason}</div><div style="font-size:10px; color:var(--text-muted); text-align:right;">${s.timestamp}</div></div>`;
                     });
                 } else { sh = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Sinyal yok.</div>'; }
                 document.getElementById('signalList').innerHTML = sh;
