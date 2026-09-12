@@ -411,6 +411,18 @@
         function getColor(sym) { let hash = 0; for(let i=0; i<sym.length; i++) hash = sym.charCodeAt(i) + ((hash<<5)-hash); return colors[Math.abs(hash)%colors.length]; }
         function fmt(n) { return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY'}).format(n); }
 
+        
+    function sellPosition(symbol) {
+        if(confirm(symbol + ' hissesini manuel olarak satmak istediginize emin misiniz?')) {
+            fetch('/api/sell?symbol=' + symbol, {method: 'POST'})
+            .then(r => r.json())
+            .then(res => {
+                alert(res.message);
+                location.reload();
+            });
+        }
+    }
+    
         function switchView(viewId, el) {
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));

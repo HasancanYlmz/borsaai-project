@@ -125,6 +125,41 @@ async def api_performance(request):
             "positions": []
         })
 
+
+async def api_sell(request):
+    try:
+        symbol = request.query.get("symbol")
+        if not symbol:
+            return web.json_response({"status": "error", "message": "Symbol eksik"})
+        
+        trades = get_active_trades()
+        for t in trades:
+            if t[0] == symbol:
+                bp = t[1]
+                lots = t[3]
+                from core.database import remove_trade
+                # mock current price as bp for manual quick sell, or fetch live
+                # for speed in UI, just close it at bp or last seen
+                cp = t[5] if t[5] > 0 else bp 
+                pnl = (cp - bp) * lots
+                
+                remove_trade(symbol, cp, pnl, "Manuel UI Satisi", lots)
+                
+                from core.database import get_portfolio, update_portfolio_cash
+                cash, _ = get_portfolio()
+                update_portfolio_cash(cash + (cp * lots))
+                
+                from interfaces.telegram_bot import send_telegram_message
+                import asyncio
+                msg = f"🔴 <b>MANUEL SATIS</b> 🔴\n\n📌 Hisse: {symbol}\n💰 Satilan: {lots} Lot"
+                asyncio.create_task(asyncio.to_thread(send_telegram_message, msg))
+                
+                return web.json_response({"status": "success", "message": f"{symbol} basariyla satildi!"})
+                
+        return web.json_response({"status": "error", "message": "Aktif pozisyon bulunamadi."})
+    except Exception as e:
+        return web.json_response({"status": "error", "message": str(e)})
+
 async def api_market(request):
     return web.json_response({
         "bist100_value": 9850.50,
@@ -143,6 +178,7 @@ async def start_mini_app_server():
     app.router.add_get('/api/data', api_data)
     app.router.add_get('/api/performance', api_performance)
     app.router.add_get('/api/market', api_market)
+    app.router.add_post('/api/sell', api_sell)
     
     app.router.add_get('/', index_handler)
     if os.path.exists(FRONTEND_DIR):
