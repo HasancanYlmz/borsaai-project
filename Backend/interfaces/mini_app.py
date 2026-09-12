@@ -153,7 +153,7 @@ async def handle_tradingview_webhook(request):
         message = f"🚨 <b>TRADINGVIEW SİNYALİ</b> 🚨\n\n📌 <b>Hisse:</b> {symbol}\n🎯 <b>Yön:</b> {action}\n💰 <b>Fiyat:</b> {price} TL\n\n<i>Yapay zeka haber onayı bekleniyor...</i>"
         
         from interfaces.telegram_bot import send_telegram_message
-        asyncio.create_task(send_telegram_message(message))
+        send_telegram_message(message)
         
         return web.json_response({"status": "success", "message": "Sinyal isleme alindi"})
         
