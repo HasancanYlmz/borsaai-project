@@ -5,13 +5,14 @@ from aiohttp import web
 from core.utils import log_event
 from agents.gemini_analyst import analyze_stock_with_gemini
 from simulator.virtual_broker import execute_virtual_buy
+from core.database import get_recent_signals, get_portfolio, get_active_trades
+import yfinance as yf
 
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Frontend"))
 
 async def handle_tradingview_webhook(request):
     try:
         data = await request.json()
-        
         if data.get("secret") != "BorsaAI_Gizli_Anahtar_2026":
             return web.json_response({"status": "error", "message": "Unauthorized"}, status=401)
             
@@ -55,17 +56,84 @@ async def process_ai_and_buy(symbol: str, price: float):
         await asyncio.to_thread(send_telegram_message, msg)
         log_event("AI_AGENT", f"{symbol} reddedildi: {reason}")
 
+# --- FRONTEND APIs ---
+
+async def api_data(request):
+    rows = get_recent_signals(10)
+    sigs = []
+    for r in rows:
+        sigs.append({
+            "timestamp": r[0],
+            "symbol": r[1],
+            "type": r[2],
+            "reason": r[5],
+            "confidence": r[4]
+        })
+    return web.json_response({"signals": sigs})
+
+async def api_performance(request):
+    cash, _ = get_portfolio()
+    trades = get_active_trades()
+    positions = []
+    
+    total_eq = cash
+    total_cost = 0
+    
+    for t in trades:
+        # symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen
+        sym = t[0]
+        bp = t[1]
+        lots = t[3]
+        
+        # mock current price for speed, real app would fetch yf here but too slow for UI
+        # We will use highest_seen as current price proxy for fast load
+        cp = t[5] 
+        pnl = (cp - bp) * lots
+        pnl_pct = ((cp - bp) / bp * 100) if bp > 0 else 0
+        
+        total_eq += (cp * lots)
+        total_cost += (bp * lots)
+        
+        positions.append({
+            "symbol": sym,
+            "lot_amount": lots,
+            "buy_price": bp,
+            "current_price": cp,
+            "pnl": pnl,
+            "pnl_pct": pnl_pct
+        })
+        
+    return web.json_response({
+        "total_portfolio_value": total_eq,
+        "total_cash": cash,
+        "total_pnl": total_eq - 12000,
+        "positions": positions
+    })
+
+async def api_market(request):
+    return web.json_response({
+        "bist100_value": 9850.50,
+        "bist100_pct": 1.2,
+        "market_regime": "YUKSELIS (BOGA)",
+        "volatility_index": "DUSUK"
+    })
+
 async def index_handler(request):
     return web.FileResponse(os.path.join(FRONTEND_DIR, 'index.html'))
 
 async def start_mini_app_server():
     app = web.Application()
     
-    # Routes
+    # TV Webhook
     app.router.add_post('/api/webhook/tv', handle_tradingview_webhook)
-    app.router.add_get('/', index_handler)
     
-    # Frontend statik dosyalari
+    # UI APIs
+    app.router.add_get('/api/data', api_data)
+    app.router.add_get('/api/performance', api_performance)
+    app.router.add_get('/api/market', api_market)
+    
+    # Frontend HTML
+    app.router.add_get('/', index_handler)
     if os.path.exists(FRONTEND_DIR):
         app.router.add_static('/', FRONTEND_DIR)
         
