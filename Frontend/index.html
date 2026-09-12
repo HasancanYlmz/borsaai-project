@@ -168,6 +168,7 @@
         .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 12px; border-radius: 10px; font-weight: 700; flex: 1; cursor:pointer;}
         .loading { text-align: center; color: var(--text-muted); font-size: 12px; padding: 30px; font-weight: 600; }
     </style>
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
     <div class="app-header">
@@ -481,6 +482,27 @@
             document.getElementById('mhLogo').style.background = getColor(sym);
             document.getElementById('mhPrice').innerHTML = price + ' ₺ <span class="sr-pct '+(isUp?'pct-up':'pct-down')+'">'+pctStr+'</span>';
             document.getElementById('stockModal').classList.add('open');
+
+            if (typeof TradingView !== 'undefined') {
+                document.getElementById('tv-chart').innerHTML = '';
+                new TradingView.widget({
+                  "autosize": true,
+                  "symbol": "BIST:" + sym,
+                  "interval": "D",
+                  "timezone": "Europe/Istanbul",
+                  "theme": "dark",
+                  "style": "1",
+                  "locale": "tr",
+                  "enable_publishing": false,
+                  "backgroundColor": "rgba(15, 23, 42, 1)",
+                  "gridColor": "rgba(30, 41, 59, 1)",
+                  "hide_top_toolbar": true,
+                  "hide_legend": true,
+                  "save_image": false,
+                  "container_id": "tv-chart"
+                });
+            }
+
             fetch('/api/stock?symbol=' + sym).then(r=>r.json()).then(data=>{
                 let f = data.fundamentals || {};
                 document.getElementById('fPE').innerText = f.pe_ratio > 0 ? f.pe_ratio.toFixed(2) : '-';

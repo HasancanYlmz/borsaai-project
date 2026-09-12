@@ -52,6 +52,11 @@ def init_db():
             cursor.execute("INSERT INTO portfolio (id, cash_balance, total_equity) VALUES (1, 12000.0, 12000.0)")
             print("[INFO] Simulator portfolio initialized with default 12,000 TRY balance.")
 
+        cursor.execute("SELECT COUNT(*) FROM active_trades")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("UPDATE portfolio SET cash_balance = 12000.0, total_equity = 12000.0")
+
+
         
         # Temizlik: Eski veritabanindan kalan 0 lotlu hayalet islemleri sil
         cursor.execute("DELETE FROM active_trades WHERE remaining_lots <= 0")
