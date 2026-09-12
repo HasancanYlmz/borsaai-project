@@ -93,7 +93,7 @@ async def run_risk_manager(is_running_flag):
                         log_partial_sale(symbol, buy_price, current_price, lots_to_sell, pnl_amount, sell_reason, buy_time)
                         
                     durum_ikon = "🔴" if pnl_amount < 0 else "🤑"
-                    msg = f\"\"\"{durum_ikon} <b>SANAL SATIS GERCEKLESTI</b> {durum_ikon}
+                    msg = f"""{durum_ikon} <b>SANAL SATIS GERCEKLESTI</b> {durum_ikon}
 
 📌 <b>Hisse:</b> {symbol}
 🔔 <b>Neden:</b> {sell_reason}
@@ -101,7 +101,7 @@ async def run_risk_manager(is_running_flag):
 📉 <b>Kar/Zarar Yuzdesi:</b> %{pnl_pct:.2f}
 💰 <b>Net K/Z:</b> {pnl_amount:.2f} TL
 🛒 <b>Satilan Lot:</b> {lots_to_sell}
-💼 <b>Kalan Kasa:</b> {new_cash:.2f} TL\"\"\"
+💼 <b>Kalan Kasa:</b> {new_cash:.2f} TL"""
                     
                     log_event("RISK_MANAGER", f"{symbol} satildi: {sell_reason}")
                     await asyncio.to_thread(send_telegram_message, msg)

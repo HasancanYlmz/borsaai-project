@@ -29,7 +29,7 @@ async def analyze_stock_with_gemini(symbol: str) -> dict:
         market_cap = info.get('marketCap', 'Bilinmiyor')
         last_price = info.get('lastPrice', 'Bilinmiyor')
         
-        prompt = f\"\"\"Sen Borsa Istanbul'da islem yapan kurumsal bir fon yoneticisisin.
+        prompt = f"""Sen Borsa Istanbul'da islem yapan kurumsal bir fon yoneticisisin.
 Bir algoritma, {clean_symbol} hissesi icin 'Hacim Patlamasi' sinyali uretti.
 
 Guncel YFinance Verileri:
@@ -40,7 +40,7 @@ Lutfen bu sinyali hizlica degerlendir ve bana yalnizca su formatta yanit ver:
 KARAR: APPROVE veya REJECT
 GUVEN: 0-100 arasi bir sayi
 NEDEN: 1 cumlelik kisa aciklama
-\"\"\"
+"""
         
         client = genai.Client(api_key=api_key)
         
