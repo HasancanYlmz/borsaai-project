@@ -59,56 +59,71 @@ async def process_ai_and_buy(symbol: str, price: float):
 # --- FRONTEND APIs ---
 
 async def api_data(request):
-    rows = get_recent_signals(10)
-    sigs = []
-    for r in rows:
-        sigs.append({
-            "timestamp": r[0],
-            "symbol": r[1],
-            "type": r[2],
-            "reason": r[5],
-            "confidence": r[4]
-        })
-    return web.json_response({"signals": sigs})
+    try:
+        rows = get_recent_signals(10)
+        sigs = []
+        for r in rows:
+            sigs.append({
+                "timestamp": r[0],
+                "symbol": r[1],
+                "type": r[2],
+                "reason": r[5],
+                "confidence": r[4]
+            })
+        return web.json_response({"signals": sigs})
+    except Exception as e:
+        log_event("API_ERROR", f"/api/data hatasi: {e}")
+        return web.json_response({"signals": []})
 
 async def api_performance(request):
-    cash, _ = get_portfolio()
-    trades = get_active_trades()
-    positions = []
-    
-    total_eq = cash
-    total_cost = 0
-    
-    for t in trades:
-        # symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen
-        sym = t[0]
-        bp = t[1]
-        lots = t[3]
+    try:
+        port = get_portfolio()
+        if port:
+            cash, _ = port
+        else:
+            cash = 12000.0
+            
+        trades = get_active_trades()
+        positions = []
         
-        # mock current price for speed, real app would fetch yf here but too slow for UI
-        # We will use highest_seen as current price proxy for fast load
-        cp = t[5] 
-        pnl = (cp - bp) * lots
-        pnl_pct = ((cp - bp) / bp * 100) if bp > 0 else 0
+        total_eq = cash
+        total_cost = 0
         
-        total_eq += (cp * lots)
-        total_cost += (bp * lots)
-        
-        positions.append({
-            "symbol": sym,
-            "lot_amount": lots,
-            "buy_price": bp,
-            "current_price": cp,
-            "pnl": pnl,
-            "pnl_pct": pnl_pct
+        for t in trades:
+            if len(t) < 6: continue
+            sym = t[0]
+            bp = t[1]
+            lots = t[3]
+            cp = t[5] 
+            pnl = (cp - bp) * lots
+            pnl_pct = ((cp - bp) / bp * 100) if bp > 0 else 0
+            
+            total_eq += (cp * lots)
+            total_cost += (bp * lots)
+            
+            positions.append({
+                "symbol": sym,
+                "lot_amount": lots,
+                "buy_price": bp,
+                "current_price": cp,
+                "pnl": pnl,
+                "pnl_pct": pnl_pct
+            })
+            
+        return web.json_response({
+            "total_portfolio_value": total_eq,
+            "total_cash": cash,
+            "total_pnl": total_eq - 12000,
+            "positions": positions
         })
-        
-    return web.json_response({
-        "total_portfolio_value": total_eq,
-        "total_cash": cash,
-        "total_pnl": total_eq - 12000,
-        "positions": positions
-    })
+    except Exception as e:
+        log_event("API_ERROR", f"/api/performance hatasi: {e}")
+        return web.json_response({
+            "total_portfolio_value": 12000.0,
+            "total_cash": 12000.0,
+            "total_pnl": 0.0,
+            "positions": []
+        })
 
 async def api_market(request):
     return web.json_response({
@@ -124,15 +139,11 @@ async def index_handler(request):
 async def start_mini_app_server():
     app = web.Application()
     
-    # TV Webhook
     app.router.add_post('/api/webhook/tv', handle_tradingview_webhook)
-    
-    # UI APIs
     app.router.add_get('/api/data', api_data)
     app.router.add_get('/api/performance', api_performance)
     app.router.add_get('/api/market', api_market)
     
-    # Frontend HTML
     app.router.add_get('/', index_handler)
     if os.path.exists(FRONTEND_DIR):
         app.router.add_static('/', FRONTEND_DIR)

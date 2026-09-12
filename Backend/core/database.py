@@ -32,6 +32,15 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT UNIQUE, buy_price REAL,
             lot_amount INTEGER, remaining_lots INTEGER, buy_time TEXT, highest_seen REAL)''')
+            
+        # SCHEMA MIGRATION FOR EXISTING DB
+        cursor.execute("PRAGMA table_info(active_trades)")
+        cols = [info[1] for info in cursor.fetchall()]
+        if "remaining_lots" not in cols:
+            cursor.execute("ALTER TABLE active_trades ADD COLUMN remaining_lots INTEGER DEFAULT 0")
+        if "highest_seen" not in cols:
+            cursor.execute("ALTER TABLE active_trades ADD COLUMN highest_seen REAL DEFAULT 0.0")
+            
         cursor.execute('''CREATE TABLE IF NOT EXISTS trade_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT, buy_price REAL, sell_price REAL,
