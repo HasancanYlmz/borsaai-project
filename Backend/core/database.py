@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 import os
 import threading
 from datetime import datetime
@@ -8,12 +8,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from core.utils import get_ist_time_str
 
-# ---------------------------------------------------------
-# SYSTEM: DATABASE MANAGER (Thread-Safe)
-# Handles SQLite connections and basic CRUD operations
-# for signals, order history, and portfolio states.
-# ---------------------------------------------------------
-
 if os.getenv("RAILWAY_VOLUME"):
     DB_PATH = os.path.join(os.getenv("RAILWAY_VOLUME"), "borsa_memory.db")
 else:
@@ -21,7 +15,6 @@ else:
 db_lock = threading.Lock()
 
 def get_connection():
-    """Provides a thread-safe SQLite connection."""
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 def init_db():
@@ -32,18 +25,13 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT, symbol TEXT, signal_type TEXT,
             regime TEXT, confidence_score REAL, reason TEXT)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS akd_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT, symbol TEXT, top_buyer TEXT,
-            top_buyer_lot INTEGER, top_seller TEXT,
-            top_seller_lot INTEGER, net_difference INTEGER)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS portfolio (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             cash_balance REAL, total_equity REAL)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS active_trades (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT UNIQUE, buy_price REAL,
-            lot_amount INTEGER, buy_time TEXT)''')
+            lot_amount INTEGER, remaining_lots INTEGER, buy_time TEXT, highest_seen REAL)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS trade_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT, buy_price REAL, sell_price REAL,
@@ -52,13 +40,11 @@ def init_db():
 
         cursor.execute("SELECT COUNT(*) FROM portfolio")
         if cursor.fetchone()[0] == 0:
-            cursor.execute("INSERT INTO portfolio (id, cash_balance, total_equity) VALUES (1, 10000.0, 10000.0)")
-            print("[INFO] Simulator portfolio initialized with default 10,000 TRY balance.")
+            cursor.execute("INSERT INTO portfolio (id, cash_balance, total_equity) VALUES (1, 12000.0, 12000.0)")
+            print("[INFO] Simulator portfolio initialized with default 12,000 TRY balance.")
 
         conn.commit()
         conn.close()
-
-# --- SIGNAL FUNCTIONS ---
 
 def save_signal(symbol: str, signal_type: str, regime: str, confidence: float, reason: str):
     with db_lock:
@@ -81,59 +67,66 @@ def get_recent_signals(limit: int = 50) -> List[Tuple]:
         conn.close()
         return rows
 
-# --- PORTFOLIO & TRADE FUNCTIONS ---
-
 def save_trade(symbol: str, buy_price: Decimal, lot_amount: int):
-    """Records a new long position in the active_trades table."""
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT OR REPLACE INTO active_trades (symbol, buy_price, lot_amount, buy_time) VALUES (?, ?, ?, ?)',
-            (symbol, float(buy_price), lot_amount, get_ist_time_str()))
+            'INSERT OR REPLACE INTO active_trades (symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen) VALUES (?, ?, ?, ?, ?, ?)',
+            (symbol, float(buy_price), lot_amount, lot_amount, get_ist_time_str(), float(buy_price)))
+        conn.commit()
+        conn.close()
+
+def update_trade_lots_and_highest(symbol: str, remaining_lots: int, highest_seen: float):
+    with db_lock:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('UPDATE active_trades SET remaining_lots = ?, highest_seen = ? WHERE symbol = ?', (remaining_lots, highest_seen, symbol))
         conn.commit()
         conn.close()
 
 def get_active_trades() -> List[Tuple]:
-    """Retrieves all currently held positions."""
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT symbol, buy_price, lot_amount, buy_time FROM active_trades')
+        cursor.execute('SELECT symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen FROM active_trades')
         rows = cursor.fetchall()
         conn.close()
         return rows
 
 def get_active_symbols() -> List[str]:
-    """Returns a list of symbols currently held in the portfolio."""
     trades = get_active_trades()
     return [row[0] for row in trades]
 
-def remove_trade(symbol: str, sell_price: float = 0.0, pnl: float = 0.0, reason: str = ""):
-    """Archives a sold position to trade_history and removes it from active_trades."""
+def remove_trade(symbol: str, sell_price: float = 0.0, pnl: float = 0.0, reason: str = "", lots_sold: int = 0):
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
-        
-        # 1. Eski işlemi bul
-        cursor.execute('SELECT buy_price, lot_amount, buy_time FROM active_trades WHERE symbol = ?', (symbol,))
+        cursor.execute('SELECT buy_price, buy_time FROM active_trades WHERE symbol = ?', (symbol,))
         row = cursor.fetchone()
-        
         if row:
-            buy_price, lot_amount, buy_time = row
-            # 2. Arşive (Geçmişe) kaydet
+            buy_price, buy_time = row
             cursor.execute('''
                 INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, get_ist_time_str()))
+            ''', (symbol, buy_price, sell_price, lots_sold, pnl, reason, buy_time, get_ist_time_str()))
             
-        # 3. Aktif tablodan sil
         cursor.execute('DELETE FROM active_trades WHERE symbol = ?', (symbol,))
         conn.commit()
         conn.close()
 
+def log_partial_sale(symbol: str, buy_price: float, sell_price: float, lots_sold: int, pnl: float, reason: str, buy_time: str):
+    with db_lock:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (symbol, buy_price, sell_price, lots_sold, pnl, reason, buy_time, get_ist_time_str()))
+        conn.commit()
+        conn.close()
+
 def update_portfolio_cash(new_cash: Decimal):
-    """Updates the available cash balance in the portfolio."""
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
@@ -142,7 +135,6 @@ def update_portfolio_cash(new_cash: Decimal):
         conn.close()
 
 def get_portfolio() -> Tuple:
-    """Returns the current portfolio cash balance and total equity."""
     with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
