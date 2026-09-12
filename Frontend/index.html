@@ -1,298 +1,178 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- PWA Mobile App Tags -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#020617">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3665/3665939.png">
-    <title>Canlı Borsa Botu</title>
-    <!-- Modern Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- İkonlar -->
+    <title>BorsaAI Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
-        :root {
-            --bg-grad-start: #0f172a; /* Derin Uzay Lacivert */
-            --bg-grad-end: #020617;   /* Derin Uzay Siyah */
-            --bg-card: rgba(30, 41, 59, 0.6);
-            --bg-nav: rgba(2, 6, 23, 0.85);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            
-            /* Lazer Renkler */
-            --neon-green: #00ffa3;
-            --neon-red: #ff2a55;
-            --neon-cyan: #00e5ff;
-            --neon-orange: #ff9d00;
-            
-            /* Glow Efektleri (Rakamlar yüksek, Çubuklar/Kutular %40 düşük) */
-            --glow-text-green: 0 0 8px rgba(0, 255, 163, 0.8);
-            --glow-text-red: 0 0 8px rgba(255, 42, 85, 0.8);
-            --glow-box-green: 0 0 10px rgba(0, 255, 163, 0.3); 
-            --glow-box-red: 0 0 10px rgba(255, 42, 85, 0.3);
-            
-            --border: rgba(255, 255, 255, 0.08);
-        }
-
+        :root { --bg-dark: #0f172a; --bg-nav: rgba(15, 23, 42, 0.85); --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #3b82f6; --neon-green: #00ffa3; --neon-cyan: #00e5ff; --up-color: #00ffa3; --up-bg: rgba(0, 255, 163, 0.1); --down-color: #ff2a55; --down-bg: rgba(255, 42, 85, 0.1); --border: #334155; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 70px; }
         
-        body { 
-            background: linear-gradient(145deg, var(--bg-grad-start) 0%, var(--bg-grad-end) 100%);
-            background-attachment: fixed;
-            color: var(--text-main); 
-            padding-bottom: 70px; 
-            overflow-x: hidden; 
-            min-height: 100vh;
-        }
-
-        /* HEADER */
         .app-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--bg-nav); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-        .app-title { font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; text-shadow: 0 0 10px rgba(255,255,255,0.3);}
-        .online-badge { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; box-shadow: var(--glow-text-green);}
-
-        /* BOTTOM NAV */
+        .app-title { font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .online-badge { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; box-shadow: 0 0 8px var(--neon-green); }
+        
         .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--bg-nav); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); font-size: 11px; font-weight: 600; gap: 4px; width: 25%; cursor: pointer; transition: 0.3s; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; font-weight: 600; gap: 4px; width: 25%; cursor: pointer; transition: 0.3s; }
         .nav-item.active { color: var(--neon-cyan); text-shadow: 0 0 8px rgba(0, 229, 255, 0.6); }
 
-        /* VIEWS */
-        .view-section { display: none; padding: 15px; animation: fadeIn 0.3s ease; }
+        .view-section { display: none; padding: 15px; }
         .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* COMMON ELEMENTS */
-        .search-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px; backdrop-filter: blur(5px); }
-        .search-bar input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 14px; }
         
-        .btn-modern { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; backdrop-filter: blur(5px);}
-        .btn-modern.active-filter { background: rgba(255, 157, 0, 0.15); border-color: var(--neon-orange); color: var(--neon-orange); box-shadow: 0 0 10px rgba(255, 157, 0, 0.2); text-shadow: 0 0 8px rgba(255, 157, 0, 0.6); }
-
-        /* STOCK LIST */
-        .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s;}
-        .stock-row:last-child { border-bottom: none; }
+        .search-bar { background: var(--bg-card); border-radius: 12px; padding: 12px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .search-bar input { background: transparent; border: none; color: white; font-size: 14px; width: 100%; outline: none; }
+        
+        .section-title { font-size: 12px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 20px 0 10px 0; }
+        
+        .stock-row { background: var(--bg-card); border-radius: 12px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid var(--border); cursor:pointer; }
         .sr-left { display: flex; align-items: center; gap: 12px; }
-        .sr-logo { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; font-size: 14px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.3);}
-        .sr-info { display: flex; flex-direction: column; }
-        .sr-sym { font-weight: 800; font-size: 15px; color: white; letter-spacing: 0.5px;}
-        .sr-name { font-size: 11px; color: var(--text-muted); margin-top: 3px; font-weight: 500;}
-        .sr-right { display: flex; flex-direction: column; align-items: flex-end; }
-        .sr-price { font-weight: 700; font-size: 16px; color: white; }
-        
-        /* Neon Colors & Glows */
-        .sr-pct { font-size: 12px; font-weight: 700; margin-top: 4px; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 2px; }
-        .pct-up { background: rgba(0, 255, 163, 0.1); color: var(--neon-green); text-shadow: var(--glow-text-green); border: 1px solid rgba(0, 255, 163, 0.2); box-shadow: var(--glow-box-green);}
-        .pct-down { background: rgba(255, 42, 85, 0.1); color: var(--neon-red); text-shadow: var(--glow-text-red); border: 1px solid rgba(255, 42, 85, 0.2); box-shadow: var(--glow-box-red);}
-        .pct-flat { background: rgba(255,255,255,0.05); color: #aaa; border: 1px solid rgba(255,255,255,0.1);}
-        
-        .fire-badge { font-size: 10px; background: rgba(255, 157, 0, 0.15); color: var(--neon-orange); border: 1px solid var(--neon-orange); padding: 2px 5px; border-radius: 4px; margin-left: 6px; text-shadow: 0 0 5px var(--neon-orange); box-shadow: 0 0 5px rgba(255, 157, 0, 0.2);}
+        .sr-logo { width: 40px; height: 40px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 14px; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .sr-sym { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+        .sr-name { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .sr-right { text-align: right; }
+        .sr-price { font-weight: 700; font-size: 15px; }
+        .sr-pct { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+        .pct-up { color: var(--up-color); background: var(--up-bg); }
+        .pct-down { color: var(--down-color); background: var(--down-bg); }
+        .pct-flat { color: var(--text-muted); background: rgba(148, 163, 184, 0.1); }
+        .fire-badge { font-size: 9px; background: rgba(255,152,0,0.2); color: #ff9800; padding: 2px 5px; border-radius: 4px; font-weight: 800; }
 
-        /* PORTFOLIO CARD */
-        .port-card { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 20px; backdrop-filter: blur(10px); box-shadow: 0 0 20px rgba(0, 229, 255, 0.05);}
-        .pc-title { font-size: 11px; color: var(--neon-cyan); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);}
-        .pc-value { font-size: 32px; font-weight: 800; color: white; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; text-shadow: 0 2px 10px rgba(255,255,255,0.2);}
-        .pc-pct { font-size: 14px; padding: 4px 10px; border-radius: 6px; font-weight: 700; }
-        .pc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);}
-        .pc-item-lbl { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; letter-spacing: 0.5px;}
-        .pc-item-val { font-size: 15px; font-weight: 700; color: white; }
+        .port-card { background: linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(30,41,59,1) 100%); border: 1px solid var(--border); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .pc-title { font-size: 11px; color: var(--neon-cyan); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+        .pc-value { font-size: 32px; font-weight: 800; color: white; display: flex; justify-content: center; align-items: baseline; gap: 10px; }
+        .pc-pct { font-size: 12px; padding: 4px 8px; border-radius: 6px; position: relative; top: -6px; }
+        .pc-grid { display: flex; justify-content: space-between; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; }
+        .pc-item-lbl { font-size: 10px; color: var(--text-muted); font-weight: 700; }
+        .pc-item-val { font-size: 14px; font-weight: 700; color: white; margin-top: 4px; }
 
-        /* POSITIONS & SIGNALS */
-        .section-title { font-size: 12px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; margin-top: 20px;}
-        .pos-card, .signal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; backdrop-filter: blur(5px); transition: 0.2s;}
-        
-        .signal-card { padding: 12px; }
-        .pos-top, .signal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .pos-sym, .signal-sym { font-size: 16px; font-weight: 800; color: white; letter-spacing: 0.5px;}
-        
-        .pos-pnl { font-size: 15px; font-weight: 800; }
-        .signal-type { font-size: 13px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid transparent; }
-        
-        /* Dinamik Renk Sınıfları */
-        .up-color { color: var(--neon-green); text-shadow: var(--glow-text-green); }
-        .down-color { color: var(--neon-red); text-shadow: var(--glow-text-red); }
-        .up-box { border-color: rgba(0,255,163,0.3); background: rgba(0,255,163,0.05); box-shadow: var(--glow-box-green); }
-        .down-box { border-color: rgba(255,42,85,0.3); background: rgba(255,42,85,0.05); box-shadow: var(--glow-box-red); }
+        .pos-card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border); }
+        .pos-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .pos-sym { font-weight: 800; font-size: 16px; }
+        .pos-pnl { font-weight: 700; font-size: 14px; }
+        .pos-details { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 15px; }
+        .btn-sell { width: 100%; background: rgba(255, 42, 85, 0.1); color: var(--down-color); border: 1px solid rgba(255, 42, 85, 0.3); padding: 10px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; }
 
-        .pos-details { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); font-weight: 500;}
-        .signal-date { font-size: 10px; color: var(--text-muted); font-weight: 500;}
-        .signal-reason { font-size: 11px; color: #cbd5e1; margin-top: 8px; line-height: 1.4; border-top: 1px solid var(--border); padding-top: 8px;}
-        
-        .pos-actions { margin-top: 12px; display: flex; gap: 10px; }
-        .btn-sell { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,42,85,0.4); background: rgba(255,42,85,0.1); color: var(--neon-red); font-weight: 700; font-size: 12px; cursor: pointer; text-shadow: var(--glow-text-red); box-shadow: var(--glow-box-red); transition: 0.2s;}
-
-        .filter-group { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 4px; }
-        .filter-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; backdrop-filter: blur(5px);}
-        .filter-btn.active { background: rgba(0, 229, 255, 0.1); color: var(--neon-cyan); border-color: var(--neon-cyan); text-shadow: 0 0 8px rgba(0, 229, 255, 0.6); box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);}
-
-        /* MODALS */
-        .fs-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(145deg, var(--bg-grad-start) 0%, var(--bg-grad-end) 100%); z-index: 2000; display: none; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .fs-modal.open { display: flex; transform: translateX(0); }
-        .modal-header { padding: 15px 20px; display: flex; align-items: center; gap: 15px; background: var(--bg-nav); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
-        .back-btn { background: transparent; border: none; color: white; display: flex; align-items: center; cursor: pointer; }
-        .mh-logo { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);}
+        .fs-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 2000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; }
+        .fs-modal.open { transform: translateX(0); }
+        .modal-header { padding: 15px 20px; display: flex; align-items: center; gap: 15px; background: var(--bg-nav); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2001; }
+        .back-btn { background: transparent; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .mh-logo { width: 36px; height: 36px; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 14px; color: white; }
         .mh-info { flex: 1; }
-        .mh-sym { font-size: 18px; font-weight: 800; color: white; letter-spacing: 0.5px;}
-        .mh-name { font-size: 12px; color: var(--text-muted); font-weight: 500;}
-        .mh-price-area { padding: 20px; background: rgba(2, 6, 23, 0.4); border-bottom: 1px solid var(--border);}
-        .mh-price { font-size: 36px; font-weight: 800; color: white; display: flex; align-items: center; gap: 12px; text-shadow: 0 2px 10px rgba(255,255,255,0.2);}
+        .mh-sym { font-weight: 800; font-size: 16px; }
+        .mh-name { font-size: 11px; color: var(--text-muted); }
+        .mh-price-area { padding: 20px; border-bottom: 1px solid var(--border); }
+        .mh-price { font-size: 28px; font-weight: 800; }
         
-        .modal-tabs { display: flex; overflow-x: auto; background: var(--bg-nav); border-bottom: 1px solid var(--border); padding: 0 10px; }
-        .modal-tabs::-webkit-scrollbar { display: none; }
-        .mt-tab { padding: 14px 15px; color: var(--text-muted); font-size: 12px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; border-bottom: 3px solid transparent; cursor: pointer; transition: 0.2s;}
-        .mt-tab.active { color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); text-shadow: 0 0 8px rgba(0, 229, 255, 0.6); }
-        .modal-body { flex: 1; overflow-y: auto; padding: 15px; }
-        .mt-content { display: none; }
-        .mt-content.active { display: block; animation: fadeIn 0.2s; }
-
-        /* DEPTH TABLE (Neon Volume Bars %40 daha düşük glow) */
-        .depth-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-        .depth-table th { color: var(--text-muted); padding: 10px 4px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600; }
-        .depth-table td { padding: 8px 4px; color: white; font-weight: 600; position: relative; z-index: 1;}
-        .depth-table td.vol-cell::before { content: ''; position: absolute; top: 3px; bottom: 3px; right: 0; z-index: -1; border-radius: 4px; transition: width 0.3s; }
-        .depth-table td.bid-vol::before { background: rgba(0, 255, 163, 0.15); box-shadow: var(--glow-box-green); width: 40%; }
-        .depth-table td.ask-vol::before { background: rgba(255, 42, 85, 0.15); box-shadow: var(--glow-box-red); width: 60%; left: 0; right: auto;}
-
-        /* ADD MODAL */
-        .mini-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); z-index: 3000; display: none; align-items: center; justify-content: center; }
-        .mini-modal.open { display: flex; }
-        .mm-content { background: var(--bg-grad-start); border: 1px solid rgba(0, 229, 255, 0.3); box-shadow: 0 0 30px rgba(0, 229, 255, 0.1); border-radius: 20px; width: 90%; max-width: 350px; padding: 25px; }
-        .mm-title { font-size: 18px; font-weight: 800; color: white; margin-bottom: 20px; text-shadow: 0 0 10px rgba(255,255,255,0.2);}
-        .mm-input { width: 100%; background: rgba(2, 6, 23, 0.6); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 10px; margin-bottom: 12px; outline: none; font-size: 15px; font-weight: 600; transition: 0.2s;}
-        .mm-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0, 229, 255, 0.2); }
-        .mm-actions { display: flex; gap: 12px; margin-top: 15px; }
-        .btn-primary { background: rgba(0, 255, 163, 0.1); border: 1px solid var(--neon-green); color: var(--neon-green); box-shadow: var(--glow-box-green); text-shadow: var(--glow-text-green); padding: 12px; border-radius: 10px; font-weight: 700; flex: 1; cursor:pointer;}
-        .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 12px; border-radius: 10px; font-weight: 700; flex: 1; cursor:pointer;}
+        .modal-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; }
+        .mt-tab { padding: 14px 20px; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; }
+        .mt-tab.active { color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); }
+        .mt-content { display: none; padding: 20px; }
+        .mt-content.active { display: block; }
+        
+        #errorLog { display: none; background: #ff2a55; color: white; font-size: 10px; padding: 10px; position: fixed; top: 0; width: 100%; z-index: 9999; word-wrap: break-word;}
         .loading { text-align: center; color: var(--text-muted); font-size: 12px; padding: 30px; font-weight: 600; }
     </style>
-<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
+    <div id="errorLog"></div>
     <div class="app-header">
         <div class="app-title"><span class="material-icons-round" style="color:var(--accent)">show_chart</span>BorsaAI Terminal</div>
         <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); font-weight:600;"><div class="online-badge"></div> Aktif</div>
     </div>
 
+    <!-- PİYASA VIEW -->
     <div id="view-piyasa" class="view-section active">
         <div class="search-bar">
             <span class="material-icons-round" style="color:var(--text-muted)">search</span>
             <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)">
         </div>
-        <div style="display:flex; gap:10px; margin-bottom:15px; overflow-x:auto; padding-bottom:5px;">
-            <button id="btnVolFilter" class="btn-modern" onclick="toggleVolFilter()">🔥 Hacim Patlaması</button>
-            <button id="btnAkdFilter" class="btn-modern" onclick="alert('Matriks AKD Verisi Bekleniyor')">🐋 Yabancı (AKD)</button>
-            <button id="btnDevreFilter" class="btn-modern" onclick="alert('Teorik Eşleşme Verisi Bekleniyor')">🧨 Devre Kesenler</button>
-            <button id="btnScalpFilter" class="btn-modern" onclick="alert('Tick/Milisaniye Verisi Bekleniyor')">⚡ Scalp Makası</button>
-        </div>
         <div class="section-title" style="margin-top:0;">BIST50 - Canlı Pano</div>
         <div id="stockList"><div class="loading">Piyasa verileri yükleniyor...</div></div>
     </div>
 
+    <!-- PORTFÖY VIEW -->
     <div id="view-portfoy" class="view-section">
         <div class="port-card">
-            <div class="pc-title">Sanal Kasa (Başlangıç: ₺10.000)</div>
+            <div class="pc-title">Sanal Kasa (Başlangıç: ₺12.000)</div>
             <div class="pc-value" id="portTotalValue">₺0,00 <span class="pc-pct pct-flat" id="portTotalPct">+%0.00</span></div>
             <div class="pc-grid">
                 <div><div class="pc-item-lbl">NAKİT</div><div class="pc-item-val" id="portCash">₺0,00</div></div>
                 <div><div class="pc-item-lbl">HİSSE DEĞERİ</div><div class="pc-item-val" id="portEquity">₺0,00</div></div>
             </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="section-title" style="margin-top:0;">Açık Pozisyonlar</div>
-            <button class="btn-modern" style="background:var(--up-bg); color:var(--up-color); border:none;" onclick="openAddModal()">
-                <span class="material-icons-round" style="font-size:16px;">add</span> Manuel Alım
-            </button>
-        </div>
+        <div class="section-title">Açık Pozisyonlar</div>
         <div id="activePositions"><div class="loading">Portföy yükleniyor...</div></div>
     </div>
 
+    <!-- RADAR VIEW -->
     <div id="view-radar" class="view-section">
-        <div class="section-title" style="margin-top:0;">Yapay Zeka Sinyalleri</div>
-        <div class="filter-group">
-            <button class="filter-btn active" onclick="setSignalFilter('ALL', this)">Tümü</button>
-            <button class="filter-btn" onclick="setSignalFilter('AL', this)">AL</button>
-            <button class="filter-btn" onclick="setSignalFilter('SAT', this)">SAT</button>
-            <button class="filter-btn" onclick="setSignalFilter('TUT', this)">TUT</button>
-        </div>
+        <div class="section-title" style="margin-top:0;">Son Yapay Zeka Sinyalleri</div>
         <div id="signalList"><div class="loading">Sinyaller taranıyor...</div></div>
     </div>
 
+    <!-- BOTTOM NAV -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchView('piyasa', this)"><span class="material-icons-round">waterfall_chart</span>Piyasa</div>
         <div class="nav-item" onclick="switchView('radar', this)"><span class="material-icons-round">radar</span>Radar</div>
         <div class="nav-item" onclick="switchView('portfoy', this)"><span class="material-icons-round">account_balance_wallet</span>Portföy</div>
-        <div class="nav-item"><span class="material-icons-round">settings</span>Ayarlar</div>
     </div>
 
+    <!-- STOCK DETAIL MODAL -->
     <div id="stockModal" class="fs-modal">
         <div class="modal-header">
             <button class="back-btn" onclick="closeStockModal()"><span class="material-icons-round">arrow_back</span></button>
             <div class="mh-logo" id="mhLogo">TH</div>
             <div class="mh-info"><div class="mh-sym" id="mhSym">THYAO</div><div class="mh-name" id="mhName">Türk Hava Yolları</div></div>
-            <span class="material-icons-round" style="color:var(--text-muted)">star_border</span>
         </div>
         <div class="mh-price-area">
-            <div class="mh-price" id="mhPrice">0,00 ₺ <span class="sr-pct pct-flat" id="mhPct">%0.00</span></div>
-            <div style="font-size:11px; color:var(--text-muted); margin-top:5px;">Canlı Veri (Gecikmeli olabilir)</div>
+            <div class="mh-price" id="mhPrice">0,00 ₺</div>
         </div>
         <div class="modal-tabs">
-            <div class="mt-tab active" onclick="switchModalTab('ozet', this)">ÖZET</div>
-            <div class="mt-tab" onclick="switchModalTab('grafik', this)">GRAFİK</div>
-            <div class="mt-tab" onclick="switchModalTab('sinyal', this)">SİNYAL</div>
+            <div class="mt-tab active" onclick="switchModalTab('grafik', this)">GRAFİK</div>
+            <div class="mt-tab" onclick="switchModalTab('ozet', this)">ÖZET</div>
         </div>
         <div class="modal-body">
-            <div id="tab-ozet" class="mt-content active">
-                <div class="pc-grid" style="margin-top:20px; border:none; padding:0;">
+            <div id="tab-grafik" class="mt-content active">
+                <div id="tv-chart" style="height:400px; width:100%; border-radius:12px; overflow:hidden;"></div>
+            </div>
+            <div id="tab-ozet" class="mt-content">
+                <div class="pc-grid" style="border:none; padding:0;">
                     <div style="background:var(--bg-card); padding:12px; border-radius:8px;"><div class="pc-item-lbl">F/K ORANI</div><div class="pc-item-val" id="fPE">-</div></div>
                     <div style="background:var(--bg-card); padding:12px; border-radius:8px;"><div class="pc-item-lbl">PD/DD</div><div class="pc-item-val" id="fPB">-</div></div>
                 </div>
-            </div>
-            <div id="tab-grafik" class="mt-content">
-                <div class="tradingview-widget-container" style="height:400px; width:100%; margin-top:10px; border-radius:8px; overflow:hidden;">
-                    <div id="tv-chart" style="height:100%; width:100%;"></div>
-                </div>
-            </div>
-            <div id="tab-sinyal" class="mt-content">
-                <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">Henüz bu hisse için AI sinyali bulunmuyor.</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ADD POSITION MODAL -->
-    <div id="addModal" class="mini-modal">
-        <div class="mm-content">
-            <div class="mm-title">Manuel Pozisyon Ekle</div>
-            <input type="text" id="addSym" class="mm-input" placeholder="Hisse Sembolü (Örn: THYAO)">
-            <input type="number" id="addPrice" step="0.01" class="mm-input" placeholder="Alış Fiyatı (Örn: 305.50)">
-            <input type="number" id="addLot" class="mm-input" placeholder="Lot Miktarı (Örn: 100)">
-            <div class="mm-actions">
-                <button class="btn-secondary" onclick="closeAddModal()">İptal</button>
-                <button class="btn-primary" onclick="submitManualTrade()">Ekle</button>
             </div>
         </div>
     </div>
 
     <script>
-        const COMPANY_NAMES = { 'AKBNK':'Akbank', 'ALARK':'Alarko Holding', 'ASELS':'Aselsan', 'ASTOR':'Astor Enerji', 'BIMAS':'BİM Mağazalar', 'BRSAN':'Borusan Boru', 'DOAS':'Doğuş Otomotiv', 'EKGYO':'Emlak Konut', 'ENKAI':'Enka İnşaat', 'EREGL':'Erdemir', 'FROTO':'Ford Otosan', 'GARAN':'Garanti BBVA', 'GUBRF':'Gübretaş', 'HEKTS':'Hektaş', 'ISCTR':'İş Bankası (C)', 'KCHOL':'Koç Holding', 'KONTR':'Kontrolmatik', 'KOZAL':'Koza Altın', 'KRDMD':'Kardemir (D)', 'ODAS':'Odaş Elektrik', 'OYAKC':'Oyak Çimento', 'PETKM':'Petkim', 'PGSUS':'Pegasus', 'SAHOL':'Sabancı Holding', 'SASA':'Sasa Polyester', 'SISE':'Şişecam', 'TCELL':'Turkcell', 'THYAO':'Türk Hava Yolları', 'TOASO':'Tofaş', 'TUPRS':'Tüpraş', 'YKBNK':'Yapı Kredi', 'MGROS':'Migros', 'SOKM':'Şok Marketler', 'MAVI':'Mavi Giyim', 'TAVHL':'TAV Havalimanları', 'TTRAK':'Türk Traktör', 'CCOLA':'Coca-Cola', 'AEFES':'Anadolu Efes', 'ULKER':'Ülker', 'VAKBN':'VakıfBank', 'HALKB':'Halkbank', 'ISMEN':'İş Yatırım', 'DOHOL':'Doğan Holding', 'KOZAA':'Koza Madencilik', 'IPEKE':'İpek Doğal Enerji', 'AKSEN':'Aksa Enerji', 'GWIND':'Galata Wind', 'ALFAS':'Alfa Solar', 'EUPWR':'Europower', 'CWENE':'CW Enerji', 'KORDS':'Kordsa' };
-        const colors = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#3949ab', '#00acc1'];
-        function getColor(sym) { let hash = 0; for(let i=0; i<sym.length; i++) hash = sym.charCodeAt(i) + ((hash<<5)-hash); return colors[Math.abs(hash)%colors.length]; }
-        function fmt(n) { return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY'}).format(n); }
+        // GLOBAL ERROR HANDLER FOR MOBILE
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            document.getElementById('errorLog').style.display = 'block';
+            document.getElementById('errorLog').innerHTML += ERROR:  <br>;
+            return false;
+        };
+        window.addEventListener("unhandledrejection", function(event) {
+            document.getElementById('errorLog').style.display = 'block';
+            document.getElementById('errorLog').innerHTML += PROMISE ERROR:  <br>;
+        });
 
+        const COMPANY_NAMES = { 'AKBNK':'Akbank', 'ALARK':'Alarko Holding', 'ASELS':'Aselsan', 'ASTOR':'Astor Enerji', 'BIMAS':'BİM Mağazalar', 'BRSAN':'Borusan Boru', 'DOAS':'Doğuş Otomotiv', 'EKGYO':'Emlak Konut', 'ENKAI':'Enka İnşaat', 'EREGL':'Erdemir', 'FROTO':'Ford Otosan', 'GARAN':'Garanti BBVA', 'GUBRF':'Gübretaş', 'HEKTS':'Hektaş', 'ISCTR':'İş Bankası (C)', 'KCHOL':'Koç Holding', 'KONTR':'Kontrolmatik', 'KOZAL':'Koza Altın', 'KRDMD':'Kardemir (D)', 'ODAS':'Odaş Elektrik', 'OYAKC':'Oyak Çimento', 'PETKM':'Petkim', 'PGSUS':'Pegasus', 'SAHOL':'Sabancı Holding', 'SASA':'Sasa Polyester', 'SISE':'Şişecam', 'TCELL':'Turkcell', 'THYAO':'Türk Hava Yolları', 'TOASO':'Tofaş', 'TUPRS':'Tüpraş', 'YKBNK':'Yapı Kredi' };
+        const colors = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#3949ab', '#00acc1'];
         
-    function sellPosition(symbol) {
-        if(confirm(symbol + ' hissesini manuel olarak satmak istediginize emin misiniz?')) {
-            fetch('/api/sell?symbol=' + symbol, {method: 'POST'})
-            .then(r => r.json())
-            .then(res => {
-                alert(res.message);
-                location.reload();
-            });
+        function getColor(sym) { let hash = 0; for(let i=0; i<sym.length; i++) hash = sym.charCodeAt(i) + ((hash<<5)-hash); return colors[Math.abs(hash)%colors.length]; }
+        
+        function fmt(n) { 
+            try {
+                return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY'}).format(n); 
+            } catch(e) {
+                return n + " ₺";
+            }
         }
-    }
-    
+
         function switchView(viewId, el) {
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -300,49 +180,14 @@
             el.classList.add('active');
         }
 
-        let rvolActive = false;
-        function toggleVolFilter() {
-            rvolActive = !rvolActive;
-            const btn = document.getElementById('btnVolFilter');
-            rvolActive ? btn.classList.add('active-filter') : btn.classList.remove('active-filter');
-            filterPiyasa();
-        }
-
-        function filterPiyasa() {
-            const q = document.getElementById('searchInput').value.toLowerCase();
-            document.querySelectorAll('.stock-row').forEach(row => {
-                const txt = row.querySelector('.sr-sym').innerText.toLowerCase() + " " + row.querySelector('.sr-name').innerText.toLowerCase();
-                const rvol = parseFloat(row.getAttribute('data-rvol') || "0");
-                const mSearch = txt.includes(q);
-                const mVol = rvolActive ? (rvol >= 1.5) : true;
-                row.style.display = (mSearch && mVol) ? 'flex' : 'none';
-            });
-        }
-        document.getElementById('searchInput').addEventListener('input', filterPiyasa);
-
-        let activeSigFilter = 'ALL';
-        function setSignalFilter(type, el) {
-            activeSigFilter = type;
-            const parent = el.parentElement;
-            parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        function switchModalTab(tabId, el) {
+            document.querySelectorAll('.mt-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.mt-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
             el.classList.add('active');
-            filterSignals();
         }
 
-        function filterSignals() {
-            document.querySelectorAll('.signal-card').forEach(card => {
-                const t = card.getAttribute('data-type');
-                if (activeSigFilter === 'ALL' || t === activeSigFilter) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-
-        let depthHtml = '';
-        for(let i=0; i<10; i++) depthHtml += `<tr><td style="text-align:left">-</td><td style="text-align:left">-</td><td style="text-align:center; font-weight:700;"><span class="up-color">-</span> | <span class="down-color">-</span></td><td style="text-align:right">-</td><td style="text-align:right">-</td></tr>`;
-        document.getElementById('depthBody').innerHTML = depthHtml;
+        function closeStockModal() { document.getElementById('stockModal').classList.remove('open'); }
 
         function openStockModal(sym, price, pctStr, isUp) {
             document.getElementById('mhSym').innerText = sym;
@@ -351,7 +196,7 @@
             document.getElementById('mhLogo').style.background = getColor(sym);
             document.getElementById('mhPrice').innerHTML = price + ' ₺ <span class="sr-pct '+(isUp?'pct-up':'pct-down')+'">'+pctStr+'</span>';
             document.getElementById('stockModal').classList.add('open');
-
+            
             if (typeof TradingView !== 'undefined') {
                 document.getElementById('tv-chart').innerHTML = '';
                 new TradingView.widget({
@@ -371,87 +216,86 @@
                   "container_id": "tv-chart"
                 });
             }
+        }
 
-            fetch('/api/stock?symbol=' + sym).then(r=>r.json()).then(data=>{
-                let f = data.fundamentals || {};
-                document.getElementById('fPE').innerText = f.pe_ratio > 0 ? f.pe_ratio.toFixed(2) : '-';
-                document.getElementById('fPB').innerText = f.pb_ratio > 0 ? f.pb_ratio.toFixed(2) : '-';
-            }).catch(()=>{});
+        function sellPosition(symbol) {
+            if(confirm(symbol + ' hissesini manuel satmak istediginize emin misiniz?')) {
+                fetch('/api/sell?symbol=' + symbol, {method: 'POST'})
+                .then(r => r.json())
+                .then(res => {
+                    alert(res.message);
+                    loadData();
+                }).catch(e => alert("Satis Hatasi: " + e));
+            }
         }
-        function closeStockModal() { document.getElementById('stockModal').classList.remove('open'); }
-        function switchModalTab(tabId, el) {
-            document.querySelectorAll('.mt-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.mt-tab').forEach(t => t.classList.remove('active'));
-            document.getElementById('tab-' + tabId).classList.add('active');
-            el.classList.add('active');
+
+        function filterPiyasa() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            document.querySelectorAll('.stock-row').forEach(row => {
+                const txt = row.querySelector('.sr-sym').innerText.toLowerCase() + " " + row.querySelector('.sr-name').innerText.toLowerCase();
+                row.style.display = txt.includes(q) ? 'flex' : 'none';
+            });
         }
-        function openAddModal() { document.getElementById('addModal').classList.add('open'); }
-        function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+        document.getElementById('searchInput').addEventListener('input', filterPiyasa);
 
         function loadData() {
-            fetch('/api/market').then(r=>r.json()).then(d => {
+            fetch('/api/market')
+            .then(r => r.json())
+            .then(d => {
                 let html = '';
                 for(let sym in COMPANY_NAMES) {
                     const obj = d[sym] || {price:0, percent:0, rvol:0};
                     const isUp = obj.percent > 0;
                     const isDown = obj.percent < 0;
                     const pctCls = isUp ? 'pct-up' : (isDown ? 'pct-down' : 'pct-flat');
-                    const sign = isUp ? '▲' : (isDown ? '▼' : '');
+                    const sign = isUp ? '+' : (isDown ? '-' : '');
                     const pctStr = sign + Math.abs(obj.percent).toFixed(2) + '%';
                     const fire = obj.rvol >= 1.5 ? '<span class="fire-badge">🔥 Hacim</span>' : '';
-                    html += `<div class="stock-row" data-rvol="${obj.rvol}" onclick="openStockModal('${sym}', '${obj.price}', '${pctStr}', ${isUp})">
-                        <div class="sr-left"><div class="sr-logo" style="background:${getColor(sym)}">${sym.substring(0,2)}</div><div class="sr-info"><div class="sr-sym">${sym}${fire}</div><div class="sr-name">${COMPANY_NAMES[sym]}</div></div></div>
-                        <div class="sr-right"><div class="sr-price">${obj.price > 0 ? obj.price.toFixed(2) : '-'} ₺</div><div class="sr-pct ${pctCls}">${pctStr}</div></div></div>`;
+                    html += <div class="stock-row" onclick="openStockModal('', '', '', )">
+                        <div class="sr-left"><div class="sr-logo" style="background:"></div><div class="sr-info"><div class="sr-sym"></div><div class="sr-name"></div></div></div>
+                        <div class="sr-right"><div class="sr-price"> ₺</div><div class="sr-pct "></div></div></div>;
                 }
                 document.getElementById('stockList').innerHTML = html;
                 filterPiyasa();
-            }).catch(()=>{});
+            }).catch(e => { console.error(e); document.getElementById('stockList').innerHTML = "Market Hatası: " + e; });
 
-            fetch('/api/performance').then(r=>r.json()).then(d => {
-                document.getElementById('portTotalValue').innerHTML = fmt(d.total_portfolio_value) + ` <span class="pc-pct ${d.total_pnl>0?'pct-up':(d.total_pnl<0?'pct-down':'pct-flat')}">${d.total_pnl>0?'+':''}${fmt(d.total_pnl)}</span>`;
+            fetch('/api/performance')
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('portTotalValue').innerHTML = fmt(d.total_portfolio_value) +  <span class="pc-pct "></span>;
                 document.getElementById('portCash').innerText = fmt(d.total_cash);
                 document.getElementById('portEquity').innerText = fmt(d.total_portfolio_value - d.total_cash);
                 let ph = '';
                 if(d.positions && d.positions.length > 0) {
                     d.positions.forEach(p => {
                         const isUp = p.pnl_pct > 0;
-                        ph += `<div class="pos-card"><div class="pos-top"><div class="pos-sym">${p.symbol} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color)">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
-                        <div class="pos-details"><div>Maliyet: <b>₺${p.buy_price.toFixed(2)}</b></div><div>Anlık: <b>₺${p.current_price.toFixed(2)}</b></div></div>
-                        <div class="pos-actions"><button class="btn-sell" onclick="alert('Matriks ile Manuel Satış Backend\\'e Eklenecek!')">Pozisyon Kapat</button></div></div>`;
+                        ph += <div class="pos-card"><div class="pos-top"><div class="pos-sym"> <span style="font-size:11px; color:var(--text-muted); font-weight:normal;"> Lot</span></div><div class="pos-pnl" style="color:var(---color)"> (%)</div></div>
+                        <div class="pos-details"><div>Maliyet: <b></b></div><div>Anlık: <b></b></div></div>
+                        <div class="pos-actions"><button class="btn-sell" onclick="sellPosition('')">Pozisyon Kapat</button></div></div>;
                     });
                 } else { ph = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Açık pozisyon yok.</div>'; }
                 document.getElementById('activePositions').innerHTML = ph;
-            }).catch(()=>{});
+            }).catch(e => { console.error(e); document.getElementById('activePositions').innerHTML = "Performans Hatası: " + e; });
 
-            fetch('/api/data').then(r=>r.json()).then(d => {
+            fetch('/api/data')
+            .then(r => r.json())
+            .then(d => {
                 let sh = '';
                 if(d.signals && d.signals.length > 0) {
                     d.signals.forEach(s => {
                         let t = s.type ? s.type.toUpperCase() : 'TUT';
                         if(t === 'BUY') t = 'AL';
                         if(t === 'SELL') t = 'SAT';
-                        if(t === 'HOLD') t = 'TUT';
                         const txtCls = (t === 'AL') ? 'up-color' : ((t === 'SAT') ? 'down-color' : 'text-muted');
-                        const boxCls = (t === 'AL') ? 'up-box' : ((t === 'SAT') ? 'down-box' : '');
-                        sh += `<div class="signal-card ${boxCls}" data-type="${t}"><div class="signal-top"><div class="signal-sym">${s.symbol}</div><div class="signal-type ${txtCls}">${t}</div></div><div class="signal-date">Tarih: ${s.timestamp}</div><div class="signal-reason">${s.reason}</div>
-        <!-- SKOR BARI -->
-        <div style="margin-top: 15px; width: 100%;">
-            <div style="position: relative; width: 100%; height: 6px; background: linear-gradient(to right, #FF2A55, #475569, #00FFA3); border-radius: 4px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-                <div style="position: absolute; left: ${s.confidence || 50}%; top: -4px; width: 14px; height: 14px; background: #ffffff; border-radius: 50%; box-shadow: 0 0 8px rgba(255,255,255,0.9); transform: translateX(-50%); transition: left 0.5s ease-out;"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 6px; font-weight: 600; letter-spacing: 0.5px;">
-                <span style="color: #FF2A55; text-shadow: 0 0 5px rgba(255,42,85,0.4);">SAT</span>
-                <span>TUT</span>
-                <span style="color: #00FFA3; text-shadow: 0 0 5px rgba(0,255,163,0.4);">AL</span>
-            </div>
-        </div></div>`;
+                        sh += <div class="pos-card" style="border-left: 4px solid var(---color);"><div class="pos-top"><div class="pos-sym"></div><div class="pos-pnl" style="color:var(---color)"></div></div><div class="pos-details" style="display:block; margin-bottom:5px;">Neden: </div><div style="font-size:10px; color:var(--text-muted); text-align:right;"></div></div>;
                     });
                 } else { sh = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Sinyal yok.</div>'; }
                 document.getElementById('signalList').innerHTML = sh;
-                filterSignals();
-            }).catch(()=>{});
+            }).catch(e => { console.error(e); });
         }
-        loadData(); setInterval(loadData, 15000); 
+
+        loadData();
+        setInterval(loadData, 15000);
     </script>
 </body>
 </html>
