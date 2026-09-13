@@ -8,114 +8,172 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <style>
-        :root { --bg-dark: #0f172a; --bg-nav: rgba(15, 23, 42, 0.85); --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --accent: #3b82f6; --neon-green: #00ffa3; --neon-cyan: #00e5ff; --up-color: #00ffa3; --up-bg: rgba(0, 255, 163, 0.1); --down-color: #ff2a55; --down-bg: rgba(255, 42, 85, 0.1); --border: #334155; }
+        :root { 
+            --bg-dark: #0a0e17; 
+            --bg-nav: rgba(10, 14, 23, 0.9); 
+            --bg-card: #131b2c; 
+            --text-main: #f8fafc; 
+            --text-muted: #8292a8; 
+            --accent: #3b82f6; 
+            --neon-green: #00ffa3; 
+            --neon-cyan: #00e5ff; 
+            --neon-purple: #b026ff;
+            --neon-red: #ff2a55;
+            --up-color: #00ffa3; 
+            --up-bg: rgba(0, 255, 163, 0.1); 
+            --down-color: #ff2a55; 
+            --down-bg: rgba(255, 42, 85, 0.1); 
+            --border: #23314d; 
+            --glow-cyan: 0 0 10px rgba(0, 229, 255, 0.5);
+            --glow-green: 0 0 10px rgba(0, 255, 163, 0.5);
+            --glow-red: 0 0 10px rgba(255, 42, 85, 0.5);
+            --glow-purple: 0 0 10px rgba(176, 38, 255, 0.5);
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 70px; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 70px; overscroll-behavior-y: contain; }
         
-        .app-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--bg-nav); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-        .app-title { font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
-        .online-badge { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; box-shadow: 0 0 8px var(--neon-green); }
+        .app-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--bg-nav); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .app-title { font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; text-shadow: 0 0 8px rgba(255,255,255,0.2); }
+        .online-badge { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; box-shadow: var(--glow-green); }
         
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--bg-nav); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        #macro-header { background: rgba(19, 27, 44, 0.95); padding: 10px 20px; font-size: 11px; color: var(--neon-cyan); border-bottom: 1px solid var(--border); font-weight: 700; display: flex; justify-content: space-between; text-shadow: 0 0 5px rgba(0,229,255,0.4); }
+        
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--bg-nav); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.4); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; font-weight: 600; gap: 4px; width: 25%; cursor: pointer; transition: 0.3s; }
         .nav-item.active { color: var(--neon-cyan); text-shadow: 0 0 8px rgba(0, 229, 255, 0.6); }
+        .nav-item.active .material-icons-round { text-shadow: var(--glow-cyan); }
 
         .view-section { display: none; padding: 15px; }
-        .view-section.active { display: block; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .search-bar { background: var(--bg-card); border-radius: 12px; padding: 12px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .search-bar { background: var(--bg-card); border-radius: 12px; padding: 12px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.3s; }
+        .search-bar:focus-within { border-color: var(--neon-cyan); box-shadow: var(--glow-cyan); }
         .search-bar input { background: transparent; border: none; color: white; font-size: 14px; width: 100%; outline: none; }
         
-        .section-title { font-size: 12px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 20px 0 10px 0; }
+        .section-title { font-size: 12px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 20px 0 10px 0; display: flex; align-items: center; gap: 6px; }
+        .section-title i { font-size: 14px; color: var(--neon-purple); text-shadow: var(--glow-purple); }
         
-        .stock-row { background: var(--bg-card); border-radius: 12px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid var(--border); cursor:pointer; }
+        .stock-row { background: var(--bg-card); border-radius: 12px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid var(--border); cursor:pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .stock-row:active { transform: scale(0.98); border-color: var(--neon-cyan); }
         .sr-left { display: flex; align-items: center; gap: 12px; }
-        .sr-logo { width: 40px; height: 40px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 14px; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .sr-logo { width: 40px; height: 40px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 14px; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.3); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .sr-sym { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; }
         .sr-name { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
         .sr-right { text-align: right; }
-        .sr-price { font-weight: 700; font-size: 15px; }
-        .sr-pct { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; }
-        .pct-up { color: var(--up-color); background: var(--up-bg); }
-        .pct-down { color: var(--down-color); background: var(--down-bg); }
-        .pct-flat { color: var(--text-muted); background: rgba(148, 163, 184, 0.1); }
-        .fire-badge { font-size: 9px; background: rgba(255,152,0,0.2); color: #ff9800; padding: 2px 5px; border-radius: 4px; font-weight: 800; }
+        .sr-price { font-weight: 800; font-size: 15px; }
+        .sr-pct { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .pct-up { color: var(--up-color); background: var(--up-bg); text-shadow: 0 0 5px rgba(0,255,163,0.5); }
+        .pct-down { color: var(--down-color); background: var(--down-bg); text-shadow: 0 0 5px rgba(255,42,85,0.5); }
+        .pct-flat { color: var(--text-muted); background: rgba(130, 146, 168, 0.1); }
+        .fire-badge { font-size: 9px; background: rgba(0,229,255,0.1); color: var(--neon-cyan); padding: 2px 5px; border-radius: 4px; font-weight: 800; border: 1px solid rgba(0,229,255,0.3); box-shadow: var(--glow-cyan); text-transform: uppercase; }
 
-        .port-card { background: linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(30,41,59,1) 100%); border: 1px solid var(--border); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .pc-title { font-size: 11px; color: var(--neon-cyan); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
-        .pc-value { font-size: 32px; font-weight: 800; color: white; display: flex; justify-content: center; align-items: baseline; gap: 10px; }
-        .pc-pct { font-size: 12px; padding: 4px 8px; border-radius: 6px; position: relative; top: -6px; }
-        .pc-grid { display: flex; justify-content: space-between; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; }
+        .port-card { background: linear-gradient(135deg, #131b2c 0%, #0a0e17 100%); border: 1px solid var(--neon-cyan); border-radius: 16px; padding: 20px; margin-bottom: 25px; box-shadow: var(--glow-cyan); position: relative; overflow: hidden; }
+        .port-card::before { content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background: radial-gradient(circle, rgba(0,229,255,0.1) 0%, transparent 70%); pointer-events:none; }
+        .pc-title { font-size: 11px; color: var(--neon-cyan); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 0 5px rgba(0,229,255,0.5); text-align: center; }
+        .pc-value { font-size: 32px; font-weight: 800; color: white; display: flex; justify-content: center; align-items: baseline; gap: 10px; text-shadow: 0 2px 10px rgba(255,255,255,0.2); }
+        .pc-pct { font-size: 12px; padding: 4px 8px; border-radius: 6px; position: relative; top: -6px; border: 1px solid rgba(255,255,255,0.1); }
+        .pc-grid { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 15px; position: relative; z-index: 1; }
         .pc-item-lbl { font-size: 10px; color: var(--text-muted); font-weight: 700; }
         .pc-item-val { font-size: 14px; font-weight: 700; color: white; margin-top: 4px; }
+        
+        .equity-container { margin-top: 15px; height: 60px; width: 100%; border-top: 1px solid rgba(0,229,255,0.1); padding-top: 10px; }
 
-        .pos-card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border); }
+        .pos-card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative; }
         .pos-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .pos-sym { font-weight: 800; font-size: 16px; }
-        .pos-pnl { font-weight: 700; font-size: 14px; }
+        .pos-sym { font-weight: 800; font-size: 16px; display:flex; align-items:center; }
+        .pos-pnl { font-weight: 800; font-size: 14px; }
         .pos-details { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 15px; }
-        .btn-sell { width: 100%; background: rgba(255, 42, 85, 0.1); color: var(--down-color); border: 1px solid rgba(255, 42, 85, 0.3); padding: 10px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; }
+        .btn-sell { width: 100%; background: rgba(255, 42, 85, 0.1); color: var(--down-color); border: 1px solid rgba(255, 42, 85, 0.5); padding: 10px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-sell:active { background: rgba(255, 42, 85, 0.3); box-shadow: var(--glow-red); }
+        
+        .risk-bar-container { margin-bottom: 15px; }
+        .risk-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-bottom: 4px; font-weight: 700; text-transform: uppercase; }
+        .risk-bar-bg { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        .risk-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+
+        .radar-card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 12px; border-left: 4px solid var(--border); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .rc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .rc-sym { font-weight: 800; font-size: 15px; }
+        .rc-type { font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 4px; }
+        .rc-reason { font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px; }
+        
+        .ai-conf-container { display: flex; align-items: center; gap: 10px; }
+        .ai-conf-lbl { font-size: 10px; font-weight: 700; color: var(--text-muted); }
+        .ai-conf-bg { flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+        .ai-conf-fill { height: 100%; border-radius: 3px; }
+        .ai-conf-val { font-size: 10px; font-weight: 800; color: white; width: 35px; text-align: right; }
 
         .fs-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 2000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; }
         .fs-modal.open { transform: translateX(0); }
         .modal-header { padding: 15px 20px; display: flex; align-items: center; gap: 15px; background: var(--bg-nav); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2001; }
         .back-btn { background: transparent; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .mh-logo { width: 36px; height: 36px; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 14px; color: white; }
+        .mh-logo { width: 36px; height: 36px; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 14px; color: white; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .mh-info { flex: 1; }
-        .mh-sym { font-weight: 800; font-size: 16px; }
+        .mh-sym { font-weight: 800; font-size: 16px; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
         .mh-name { font-size: 11px; color: var(--text-muted); }
-        .mh-price-area { padding: 20px; border-bottom: 1px solid var(--border); }
+        .mh-price-area { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; background: var(--bg-card); }
         .mh-price { font-size: 28px; font-weight: 800; }
         
-        .modal-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; }
-        .mt-tab { padding: 14px 20px; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; }
-        .mt-tab.active { color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); }
+        .modal-tabs { display: flex; border-bottom: 1px solid var(--border); overflow-x: auto; background: var(--bg-card); }
+        .mt-tab { padding: 14px 20px; color: var(--text-muted); font-size: 12px; font-weight: 800; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; letter-spacing: 1px; }
+        .mt-tab.active { color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); text-shadow: var(--glow-cyan); }
         .mt-content { display: none; padding: 20px; }
-        .mt-content.active { display: block; }
+        .mt-content.active { display: block; animation: fadeIn 0.3s ease-out; }
         
-        #errorLog { display: none; background: #ff2a55; color: white; font-size: 10px; padding: 10px; position: fixed; top: 0; width: 100%; z-index: 9999; word-wrap: break-word;}
+        #errorLog { display: none; background: rgba(255,42,85,0.9); color: white; font-size: 10px; padding: 10px; position: fixed; top: 0; width: 100%; z-index: 9999; word-wrap: break-word; font-weight: bold; border-bottom: 2px solid #fff; }
         .loading { text-align: center; color: var(--text-muted); font-size: 12px; padding: 30px; font-weight: 600; }
+        
+        #pull-refresh { text-align: center; color: var(--neon-cyan); font-size: 11px; font-weight: 700; height: 0; overflow: hidden; transition: height 0.2s; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.05); }
+        .neon-badge-long { background: rgba(0, 255, 163, 0.15); color: var(--neon-green); padding: 3px 8px; border-radius: 4px; font-size: 10px; margin-left: 8px; border: 1px solid rgba(0,255,163,0.3); box-shadow: var(--glow-green); }
+        .neon-badge-short { background: rgba(255, 42, 85, 0.15); color: var(--neon-red); padding: 3px 8px; border-radius: 4px; font-size: 10px; margin-left: 8px; border: 1px solid rgba(255,42,85,0.3); box-shadow: var(--glow-red); }
     </style>
 </head>
 <body>
     <div id="errorLog"></div>
+    <div id="pull-refresh"><span class="material-icons-round" style="font-size:16px; margin-right:5px; animation: spin 1s linear infinite;">sync</span> Guncelleniyor...</div>
+    <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+
     <div class="app-header">
-        <div class="app-title"><span class="material-icons-round" style="color:var(--accent)">show_chart</span>BorsaAI Terminal</div>
-        <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); font-weight:600;"><div class="online-badge"></div> Aktif</div>
+        <div class="app-title"><span class="material-icons-round" style="color:var(--neon-cyan); text-shadow: var(--glow-cyan);">show_chart</span>BorsaAI Terminal</div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); font-weight:600;"><div class="online-badge"></div> SISTEM AKTIF</div>
     </div>
 
     <!-- PİYASA VIEW -->
-    <div id="macro-header" style="background:var(--bg-card); padding:8px 15px; font-size:11px; color:var(--neon-cyan); border-bottom:1px solid var(--border); font-weight:700; display:flex; justify-content:space-between;">
-        <span>BIST100: <span id="bistVal">Yükleniyor...</span></span>
-        <span>Rejim: <span id="bistRegime">-</span></span>
-    </div>
-    
     <div id="view-piyasa" class="view-section active">
+        <div id="macro-header">
+            <span>BIST100: <span id="bistVal" style="color:white; text-shadow:none;">Yükleniyor...</span></span>
+            <span>REJIM: <span id="bistRegime" style="color:white; text-shadow:none;">-</span></span>
+        </div>
+        <br>
         <div class="search-bar">
-            <span class="material-icons-round" style="color:var(--text-muted)">search</span>
+            <span class="material-icons-round" style="color:var(--neon-purple); text-shadow: var(--glow-purple);">search</span>
             <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)">
         </div>
-        <div class="section-title" style="margin-top:0;">BIST50 - Canlı Pano</div>
+        <div class="section-title"><span class="material-icons-round">analytics</span> BIST30 - CANLI PANO</div>
         <div id="stockList"><div class="loading">Piyasa verileri yükleniyor...</div></div>
     </div>
 
     <!-- PORTFÖY VIEW -->
     <div id="view-portfoy" class="view-section">
         <div class="port-card">
-            <div class="pc-title">Sanal Kasa (Başlangıç: ₺12.000)</div>
-            <div class="pc-value" id="portTotalValue">₺0,00 <span class="pc-pct pct-flat" id="portTotalPct">+%0.00</span></div>
+            <div class="pc-title">Sanal Kasa (Başlangıç: 12.000 TL)</div>
+            <div class="pc-value" id="portTotalValue">0,00 TL <span class="pc-pct pct-flat" id="portTotalPct">+%0.00</span></div>
+            
+            <div class="equity-container" id="equityChartContainer"></div>
+            
             <div class="pc-grid">
-                <div><div class="pc-item-lbl">NAKİT</div><div class="pc-item-val" id="portCash">₺0,00</div></div>
-                <div><div class="pc-item-lbl">HİSSE DEĞERİ</div><div class="pc-item-val" id="portEquity">₺0,00</div></div>
+                <div><div class="pc-item-lbl">NAKIT (LIKIT)</div><div class="pc-item-val" id="portCash">0,00 TL</div></div>
+                <div style="text-align:right;"><div class="pc-item-lbl">POZISYON DEGERI</div><div class="pc-item-val" id="portEquity">0,00 TL</div></div>
             </div>
         </div>
-        <div class="section-title">Açık Pozisyonlar</div>
+        <div class="section-title"><span class="material-icons-round">work_outline</span> Açık Pozisyonlar</div>
         <div id="activePositions"><div class="loading">Portföy yükleniyor...</div></div>
     </div>
 
     <!-- RADAR VIEW -->
     <div id="view-radar" class="view-section">
-        <div class="section-title" style="margin-top:0;">Son Yapay Zeka Sinyalleri</div>
+        <div class="section-title"><span class="material-icons-round">radar</span> Son YZ Sinyalleri</div>
         <div id="signalList"><div class="loading">Sinyaller taranıyor...</div></div>
     </div>
 
@@ -134,20 +192,21 @@
             <div class="mh-info"><div class="mh-sym" id="mhSym">THYAO</div><div class="mh-name" id="mhName">Türk Hava Yolları</div></div>
         </div>
         <div class="mh-price-area">
-            <div class="mh-price" id="mhPrice">0,00 ₺</div>
+            <div class="mh-price" id="mhPrice">0,00 TL</div>
+            <div id="mhPct"></div>
         </div>
         <div class="modal-tabs">
-            <div class="mt-tab active" onclick="switchModalTab('grafik', this)">GRAFİK</div>
-            <div class="mt-tab" onclick="switchModalTab('ozet', this)">ÖZET</div>
+            <div class="mt-tab active" onclick="switchModalTab('grafik', this)">GRAFIK (MUM)</div>
+            <div class="mt-tab" onclick="switchModalTab('ozet', this)">TEMEL OZET</div>
         </div>
         <div class="modal-body">
             <div id="tab-grafik" class="mt-content active">
-                <div id="tv-chart" style="height:400px; width:100%; border-radius:12px; overflow:hidden;"></div>
+                <div id="tv-chart" style="height:450px; width:100%; border-radius:12px; overflow:hidden; border: 1px solid var(--border); box-shadow: inset 0 0 20px rgba(0,0,0,0.5);"></div>
             </div>
             <div id="tab-ozet" class="mt-content">
-                <div class="pc-grid" style="border:none; padding:0;">
-                    <div style="background:var(--bg-card); padding:12px; border-radius:8px;"><div class="pc-item-lbl">F/K ORANI</div><div class="pc-item-val" id="fPE">-</div></div>
-                    <div style="background:var(--bg-card); padding:12px; border-radius:8px;"><div class="pc-item-lbl">PD/DD</div><div class="pc-item-val" id="fPB">-</div></div>
+                <div class="pc-grid" style="border:none; padding:0; gap:10px;">
+                    <div style="background:var(--bg-card); padding:15px; border-radius:12px; flex:1; border: 1px solid var(--border);"><div class="pc-item-lbl">F/K ORANI</div><div class="pc-item-val" style="font-size:18px;">-</div></div>
+                    <div style="background:var(--bg-card); padding:15px; border-radius:12px; flex:1; border: 1px solid var(--border);"><div class="pc-item-lbl">PD/DD</div><div class="pc-item-val" style="font-size:18px;">-</div></div>
                 </div>
             </div>
         </div>
@@ -156,12 +215,12 @@
     <script>
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             document.getElementById('errorLog').style.display = 'block';
-            document.getElementById('errorLog').innerHTML += "ERROR: " + msg + "<br>";
+            document.getElementById('errorLog').innerHTML += "HATA: " + msg + "<br>";
             return false;
         };
         window.addEventListener("unhandledrejection", function(event) {
             document.getElementById('errorLog').style.display = 'block';
-            document.getElementById('errorLog').innerHTML += "PROMISE ERROR: " + event.reason + "<br>";
+            document.getElementById('errorLog').innerHTML += "SISTEM HATASI: " + event.reason + "<br>";
         });
 
         const COMPANY_NAMES = { 'AKBNK':'Akbank', 'ALARK':'Alarko Holding', 'ASELS':'Aselsan', 'ASTOR':'Astor Enerji', 'BIMAS':'BİM Mağazalar', 'BRSAN':'Borusan Boru', 'DOAS':'Doğuş Otomotiv', 'EKGYO':'Emlak Konut', 'ENKAI':'Enka İnşaat', 'EREGL':'Erdemir', 'FROTO':'Ford Otosan', 'GARAN':'Garanti BBVA', 'GUBRF':'Gübretaş', 'HEKTS':'Hektaş', 'ISCTR':'İş Bankası (C)', 'KCHOL':'Koç Holding', 'KONTR':'Kontrolmatik', 'KOZAL':'Koza Altın', 'KRDMD':'Kardemir (D)', 'ODAS':'Odaş Elektrik', 'OYAKC':'Oyak Çimento', 'PETKM':'Petkim', 'PGSUS':'Pegasus', 'SAHOL':'Sabancı Holding', 'SASA':'Sasa Polyester', 'SISE':'Şişecam', 'TCELL':'Turkcell', 'THYAO':'Türk Hava Yolları', 'TOASO':'Tofaş', 'TUPRS':'Tüpraş', 'YKBNK':'Yapı Kredi' };
@@ -170,11 +229,7 @@
         function getColor(sym) { let hash = 0; for(let i=0; i<sym.length; i++) hash = sym.charCodeAt(i) + ((hash<<5)-hash); return colors[Math.abs(hash)%colors.length]; }
         
         function fmt(n) { 
-            try {
-                return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY'}).format(n); 
-            } catch(e) {
-                return n + " ₺";
-            }
+            try { return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY'}).format(n); } catch(e) { return n.toFixed(2) + " TL"; }
         }
 
         function switchView(viewId, el) {
@@ -182,6 +237,7 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('view-' + viewId).classList.add('active');
             el.classList.add('active');
+            if(viewId === 'portfoy' && !equityChartInit) initEquityChart();
         }
 
         function switchModalTab(tabId, el) {
@@ -199,11 +255,12 @@
             document.getElementById('mhName').innerText = COMPANY_NAMES[sym] || sym;
             document.getElementById('mhLogo').innerText = sym.substring(0,2);
             document.getElementById('mhLogo').style.background = getColor(sym);
-            document.getElementById('mhPrice').innerHTML = price + ' ₺ <span class="sr-pct '+(isUp?'pct-up':'pct-down')+'">'+pctStr+'</span>';
+            document.getElementById('mhPrice').innerHTML = parseFloat(price).toFixed(2) + ' TL';
+            document.getElementById('mhPct').innerHTML = `<span class="sr-pct ${isUp?'pct-up':'pct-down'}">${pctStr}</span>`;
             document.getElementById('stockModal').classList.add('open');
             
             const container = document.getElementById('tv-chart');
-            container.innerHTML = '<div class="loading">Grafik verisi yükleniyor...</div>';
+            container.innerHTML = '<div class="loading">Mum Grafik ve Hacim verisi yükleniyor...</div>';
             
             fetch('/api/history?symbol=' + sym)
             .then(r => r.json())
@@ -214,28 +271,29 @@
                 }
                 
                 container.innerHTML = '';
-                
-                if (currentChart) {
-                    currentChart.remove();
-                }
+                if (currentChart) currentChart.remove();
                 
                 const chart = LightweightCharts.createChart(container, {
-                    width: container.clientWidth,
-                    height: container.clientHeight,
-                    layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#94a3b8' },
-                    grid: { vertLines: { color: 'rgba(51, 65, 85, 0.4)' }, horzLines: { color: 'rgba(51, 65, 85, 0.4)' } },
+                    width: container.clientWidth, height: container.clientHeight,
+                    layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8292a8' },
+                    grid: { vertLines: { color: 'rgba(35, 49, 77, 0.5)' }, horzLines: { color: 'rgba(35, 49, 77, 0.5)' } },
                     rightPriceScale: { borderVisible: false },
                     timeScale: { borderVisible: false, fixLeftEdge: true, fixRightEdge: true },
                 });
                 
-                const areaSeries = chart.addAreaSeries({
-                    lineColor: isUp ? '#00ffa3' : '#ff2a55',
-                    topColor: isUp ? 'rgba(0, 255, 163, 0.4)' : 'rgba(255, 42, 85, 0.4)',
-                    bottomColor: isUp ? 'rgba(0, 255, 163, 0.0)' : 'rgba(255, 42, 85, 0.0)',
-                    lineWidth: 2,
+                const candleSeries = chart.addCandlestickSeries({
+                    upColor: '#00ffa3', downColor: '#ff2a55', borderVisible: false,
+                    wickUpColor: '#00ffa3', wickDownColor: '#ff2a55'
                 });
                 
-                areaSeries.setData(res.data);
+                const volumeSeries = chart.addHistogramSeries({
+                    color: '#26a69a', priceFormat: { type: 'volume' },
+                    priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 }
+                });
+                
+                candleSeries.setData(res.data.map(d => ({time: d.time, open: d.open, high: d.high, low: d.low, close: d.close})));
+                volumeSeries.setData(res.data.map(d => ({time: d.time, value: d.value, color: d.close > d.open ? 'rgba(0,255,163,0.3)' : 'rgba(255,42,85,0.3)'})));
+                
                 chart.timeScale().fitContent();
                 currentChart = chart;
             }).catch(e => {
@@ -244,13 +302,11 @@
         }
 
         function sellPosition(symbol) {
-            if(confirm(symbol + ' hissesini manuel satmak istediginize emin misiniz?')) {
+            if(confirm(symbol + ' pozisyonunu kapatmak istediginize emin misiniz?')) {
                 fetch('/api/sell?symbol=' + symbol, {method: 'POST'})
                 .then(r => r.json())
-                .then(res => {
-                    alert(res.message);
-                    loadData();
-                }).catch(e => alert("Satis Hatasi: " + e));
+                .then(res => { alert(res.message); loadData(); })
+                .catch(e => alert("Kapatma Hatasi: " + e));
             }
         }
 
@@ -262,6 +318,25 @@
             });
         }
         document.getElementById('searchInput').addEventListener('input', filterPiyasa);
+
+        let equityChartInit = false;
+        let eqChart = null;
+        let eqSeries = null;
+        function initEquityChart() {
+            const container = document.getElementById('equityChartContainer');
+            if(!container) return;
+            eqChart = LightweightCharts.createChart(container, {
+                width: container.clientWidth, height: container.clientHeight,
+                layout: { background: { type: 'solid', color: 'transparent' }, textColor: 'transparent' },
+                grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+                rightPriceScale: { visible: false }, timeScale: { visible: false },
+                handleScroll: false, handleScale: false
+            });
+            eqSeries = eqChart.addAreaSeries({
+                lineColor: '#00e5ff', topColor: 'rgba(0, 229, 255, 0.4)', bottomColor: 'rgba(0, 229, 255, 0.0)', lineWidth: 2
+            });
+            equityChartInit = true;
+        }
 
         function loadData() {
             fetch('/api/market')
@@ -276,6 +351,7 @@
                 let html = '';
                 for(let sym in COMPANY_NAMES) {
                     const obj = d[sym] || {price:0, percent:0, rvol:0};
+                    if(obj.price === 0) continue; // Veri yoksa gec
                     const isUp = obj.percent > 0;
                     const isDown = obj.percent < 0;
                     const pctCls = isUp ? 'pct-up' : (isDown ? 'pct-down' : 'pct-flat');
@@ -283,12 +359,12 @@
                     const pctStr = sign + Math.abs(obj.percent).toFixed(2) + '%';
                     const fire = obj.rvol >= 1.5 ? '<span class="fire-badge">HACIM YUKSEK</span>' : '';
                     html += `<div class="stock-row" onclick="openStockModal('${sym}', '${obj.price}', '${pctStr}', ${isUp})">
-                        <div class="sr-left"><div class="sr-logo" style="background:${getColor(sym)}">${sym.substring(0,2)}</div><div class="sr-info"><div class="sr-sym">${sym}${fire}</div><div class="sr-name">${COMPANY_NAMES[sym]}</div></div></div>
-                        <div class="sr-right"><div class="sr-price">${obj.price > 0 ? obj.price.toFixed(2) : '-'} ₺</div><div class="sr-pct ${pctCls}">${pctStr}</div></div></div>`;
+                        <div class="sr-left"><div class="sr-logo" style="background:${getColor(sym)}">${sym.substring(0,2)}</div><div class="sr-info"><div class="sr-sym">${sym} ${fire}</div><div class="sr-name">${COMPANY_NAMES[sym]}</div></div></div>
+                        <div class="sr-right"><div class="sr-price">${obj.price > 0 ? obj.price.toFixed(2) : '-'} TL</div><div class="sr-pct ${pctCls}">${pctStr}</div></div></div>`;
                 }
-                document.getElementById('stockList').innerHTML = html;
+                document.getElementById('stockList').innerHTML = html || '<div class="loading">Piyasa kapali veya veri yok.</div>';
                 filterPiyasa();
-            }).catch(e => { console.error(e); document.getElementById('stockList').innerHTML = "Market Hatasi: " + e; });
+            }).catch(e => { console.error(e); });
 
             fetch('/api/performance')
             .then(r => r.json())
@@ -296,19 +372,56 @@
                 document.getElementById('portTotalValue').innerHTML = fmt(d.total_portfolio_value) + ` <span class="pc-pct ${d.total_pnl>0?'pct-up':(d.total_pnl<0?'pct-down':'pct-flat')}">${d.total_pnl>0?'+':''}${fmt(d.total_pnl)}</span>`;
                 document.getElementById('portCash').innerText = fmt(d.total_cash);
                 document.getElementById('portEquity').innerText = fmt(d.total_portfolio_value - d.total_cash);
+                
+                // Update Equity Curve Mock Data (ending at real value)
+                if(equityChartInit && eqSeries) {
+                    let mockData = [];
+                    let base = 12000;
+                    let target = d.total_portfolio_value;
+                    let step = (target - base) / 20;
+                    let now = new Date();
+                    for(let i=20; i>=0; i--) {
+                        let d = new Date(now.getTime() - i*86400000);
+                        let val = base + step*(20-i) + (Math.random()*100 - 50); // add some noise
+                        if(i===0) val = target;
+                        mockData.push({time: d.toISOString().split('T')[0], value: val});
+                    }
+                    eqSeries.setData(mockData);
+                }
+
                 let ph = '';
                 if(d.positions && d.positions.length > 0) {
                     d.positions.forEach(p => {
                         const isUp = p.pnl_pct > 0;
+                        const typeBadge = p.type === 'SHORT' ? '<span class="neon-badge-short">SHORT (VIOP)</span>' : '<span class="neon-badge-long">LONG (SPOT)</span>';
+                        const borderGlow = p.type === 'SHORT' ? 'border-left: 4px solid var(--neon-red);' : 'border-left: 4px solid var(--neon-green);';
                         
-const typeBadge = p.type === 'SHORT' ? '<span style="background:rgba(255,42,85,0.2); color:#ff2a55; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:8px;">SHORT</span>' : '<span style="background:rgba(0,255,163,0.2); color:#00ffa3; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:8px;">LONG</span>';
-ph += `<div class="pos-card"><div class="pos-top"><div class="pos-sym">${p.symbol} ${typeBadge} <span style="font-size:11px; color:var(--text-muted); font-weight:normal; margin-left:5px;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color)">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
-                        <div class="pos-details"><div>Maliyet: <b>${fmt(p.buy_price)}</b></div><div>Anlik: <b>${fmt(p.current_price)}</b></div></div>
+                        // Risk Bar Calculation (assume 2% stop loss)
+                        let riskPct = 0;
+                        let riskColor = 'var(--neon-green)';
+                        if(p.type === 'LONG') {
+                            let dropPct = ((p.buy_price - p.current_price) / p.buy_price) * 100;
+                            riskPct = Math.max(0, Math.min(100, (dropPct / 2.0) * 100)); // 2% drop = 100% risk
+                        } else {
+                            let risePct = ((p.current_price - p.buy_price) / p.buy_price) * 100;
+                            riskPct = Math.max(0, Math.min(100, (risePct / 2.0) * 100));
+                        }
+                        if(riskPct > 50) riskColor = '#ff9800';
+                        if(riskPct > 80) riskColor = 'var(--neon-red)';
+                        
+                        ph += `<div class="pos-card" style="${borderGlow}"><div class="pos-top"><div class="pos-sym">${p.symbol} ${typeBadge} <span style="font-size:11px; color:var(--text-muted); font-weight:normal; margin-left:8px;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color); text-shadow: ${isUp?'var(--glow-green)':(p.pnl_pct<0?'var(--glow-red)':'none')};">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
+                        <div class="pos-details"><div>Maliyet: <b style="color:white;">${fmt(p.buy_price)}</b></div><div>Anlik: <b style="color:white;">${fmt(p.current_price)}</b></div></div>
+                        
+                        <div class="risk-bar-container">
+                            <div class="risk-labels"><span>Risk (Zarar Kes Mesafe)</span><span>%${riskPct.toFixed(0)}</span></div>
+                            <div class="risk-bar-bg"><div class="risk-bar-fill" style="width:${riskPct}%; background:${riskColor}; box-shadow:0 0 8px ${riskColor};"></div></div>
+                        </div>
+                        
                         <div class="pos-actions"><button class="btn-sell" onclick="sellPosition('${p.symbol}')">Pozisyon Kapat</button></div></div>`;
                     });
-                } else { ph = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Acik pozisyon yok.</div>'; }
+                } else { ph = '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px;">Acik pozisyon yok. NAKIT (LIKIT) formasyonundayiz.</div>'; }
                 document.getElementById('activePositions').innerHTML = ph;
-            }).catch(e => { console.error(e); document.getElementById('activePositions').innerHTML = "Performans Hatasi: " + e; });
+            }).catch(e => { console.error(e); });
 
             fetch('/api/data')
             .then(r => r.json())
@@ -319,13 +432,46 @@ ph += `<div class="pos-card"><div class="pos-top"><div class="pos-sym">${p.symbo
                         let t = s.type ? s.type.toUpperCase() : 'TUT';
                         if(t === 'BUY') t = 'AL';
                         if(t === 'SELL') t = 'SAT';
-                        const txtCls = (t === 'AL') ? 'up-color' : ((t === 'SAT') ? 'down-color' : 'text-muted');
-                        sh += `<div class="pos-card" style="border-left: 4px solid var(--${txtCls.replace('-color','')}-color);"><div class="pos-top"><div class="pos-sym">${s.symbol}</div><div class="pos-pnl" style="color:var(--${txtCls.replace('-color','')}-color)">${t}</div></div><div class="pos-details" style="display:block; margin-bottom:5px;">Neden: ${s.reason}</div><div style="font-size:10px; color:var(--text-muted); text-align:right;">${s.timestamp}</div></div>`;
+                        let cColor = 'var(--text-muted)'; let glow = 'none';
+                        if(t === 'AL') { cColor = 'var(--neon-green)'; glow = 'var(--glow-green)'; }
+                        if(t === 'SAT' || t === 'SHORT') { cColor = 'var(--neon-red)'; glow = 'var(--glow-red)'; }
+                        if(t === 'COVER') { cColor = 'var(--neon-cyan)'; glow = 'var(--glow-cyan)'; }
+                        
+                        // Confidence Bar
+                        let conf = s.confidence || 0;
+                        let confColor = conf > 80 ? 'var(--neon-green)' : (conf > 60 ? '#ff9800' : 'var(--neon-red)');
+                        
+                        sh += `<div class="radar-card" style="border-left-color:${cColor};">
+                            <div class="rc-top"><div class="rc-sym">${s.symbol}</div><div class="rc-type" style="color:${cColor}; background:rgba(255,255,255,0.05); border:1px solid ${cColor}; box-shadow:${glow};">${t}</div></div>
+                            <div class="rc-reason">Sinyal Aciklamasi: ${s.reason}</div>
+                            <div class="ai-conf-container">
+                                <span class="ai-conf-lbl">YZ Guven Skoru</span>
+                                <div class="ai-conf-bg"><div class="ai-conf-fill" style="width:${conf}%; background:${confColor}; box-shadow: 0 0 5px ${confColor};"></div></div>
+                                <span class="ai-conf-val">${conf.toFixed(0)}%</span>
+                            </div>
+                            <div style="font-size:9px; color:var(--text-muted); text-align:right; margin-top:8px;">ZAMAN: ${s.timestamp}</div>
+                        </div>`;
                     });
-                } else { sh = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">Sinyal yok.</div>'; }
+                } else { sh = '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px;">Tarama devam ediyor, sinyal yok.</div>'; }
                 document.getElementById('signalList').innerHTML = sh;
             }).catch(e => { console.error(e); });
         }
+
+        // Pull to refresh logic
+        let touchstartY = 0;
+        let pRef = document.getElementById('pull-refresh');
+        document.addEventListener('touchstart', e => { touchstartY = e.touches[0].clientY; }, {passive: true});
+        document.addEventListener('touchmove', e => {
+            if(window.scrollY === 0 && e.touches[0].clientY > touchstartY + 50) {
+                pRef.style.height = '40px';
+            }
+        }, {passive: true});
+        document.addEventListener('touchend', e => {
+            if(pRef.style.height === '40px') {
+                loadData();
+                setTimeout(() => pRef.style.height = '0', 1000);
+            }
+        }, {passive: true});
 
         loadData();
         setInterval(loadData, 15000);

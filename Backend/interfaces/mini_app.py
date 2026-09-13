@@ -268,6 +268,7 @@ async def api_history(request):
         import yfinance as yf
         import asyncio
         import pandas as pd
+        import math
         
         ticker = f"{symbol}.IS"
         def fetch_data():
@@ -275,9 +276,21 @@ async def api_history(request):
             if df.empty: return []
             data = []
             for date, row in df.iterrows():
-                close_val = row["Close"].iloc[0] if isinstance(row["Close"], pd.Series) else row["Close"]
-                if pd.isna(close_val): continue
-                data.append({"time": date.strftime("%Y-%m-%d"), "value": float(close_val)})
+                try:
+                    o = float(row["Open"].iloc[0] if isinstance(row["Open"], pd.Series) else row["Open"])
+                    h = float(row["High"].iloc[0] if isinstance(row["High"], pd.Series) else row["High"])
+                    l = float(row["Low"].iloc[0] if isinstance(row["Low"], pd.Series) else row["Low"])
+                    c = float(row["Close"].iloc[0] if isinstance(row["Close"], pd.Series) else row["Close"])
+                    v = float(row["Volume"].iloc[0] if isinstance(row["Volume"], pd.Series) else row["Volume"])
+                    
+                    if math.isnan(o) or math.isnan(c): continue
+                    
+                    data.append({
+                        "time": date.strftime("%Y-%m-%d"),
+                        "open": o, "high": h, "low": l, "close": c, "value": v
+                    })
+                except:
+                    continue
             return data
             
         data = await asyncio.to_thread(fetch_data)
