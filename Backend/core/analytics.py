@@ -6,19 +6,8 @@ from core.utils import log_event
 
 def get_daily_analytics():
     today = date.today().strftime('%Y-%m-%d')
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('PRAGMA table_info(trade_history)')
-        cols = [info[1] for info in cursor.fetchall()]
-        if 'duration_minutes' not in cols:
-            cursor.execute('ALTER TABLE trade_history ADD COLUMN duration_minutes REAL DEFAULT 0')
-            conn.commit()
-        cursor.execute(
-            'SELECT symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time FROM trade_history WHERE sell_time LIKE ? ORDER BY sell_time DESC',
-            (today + '%',))
-        rows = cursor.fetchall()
-        conn.close()
+    from core.database import get_daily_trades
+    rows = get_daily_trades(today)
 
     if not rows:
         return None

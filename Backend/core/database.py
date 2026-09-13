@@ -10,7 +10,7 @@ from core.utils import get_ist_time_str
 
 LOCAL_DB_PATH = os.path.join(os.path.dirname(__file__), 'borsa_memory.db')
 DATABASE_URL = os.getenv("DATABASE_URL")
-DB_LOCK = threading.Lock()
+db_lock = threading.Lock()
 
 _IS_POSTGRES = bool(DATABASE_URL)
 
@@ -27,7 +27,7 @@ def get_connection():
         return sqlite3.connect(LOCAL_DB_PATH, check_same_thread=False)
 
 def _execute(query_sqlite, query_pg, params=(), fetch=None):
-    with DB_LOCK:
+    with db_lock:
         conn = get_connection()
         cursor = conn.cursor()
         result = None
@@ -151,3 +151,8 @@ def get_portfolio() -> Tuple:
     return _execute('SELECT cash_balance, total_equity FROM portfolio WHERE id = 1', 'SELECT cash_balance, total_equity FROM portfolio WHERE id = 1', fetch='one')
 
 init_db()
+
+def get_daily_trades(today: str):
+    q_sq = 'SELECT symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time FROM trade_history WHERE sell_time LIKE ? ORDER BY sell_time DESC'
+    q_pg = 'SELECT symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time FROM trade_history WHERE sell_time LIKE %s ORDER BY sell_time DESC'
+    return _execute(q_sq, q_pg, (today + '%',), fetch='all')
