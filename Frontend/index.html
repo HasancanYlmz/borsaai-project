@@ -148,7 +148,7 @@
             <span class="material-icons-round" style="color:var(--neon-purple); text-shadow: var(--glow-purple);">search</span>
             <input type="text" id="searchInput" placeholder="Hisse ara... (THYAO, AKBNK)">
         </div>
-        <div class="section-title"><span class="material-icons-round">analytics</span> BIST30 - CANLI PANO</div>
+        <div class="section-title"><span class="material-icons-round">analytics</span> BIST100 - CANLI PANO</div>
         <div id="stockList"><div class="loading">Piyasa verileri yükleniyor...</div></div>
     </div>
 
@@ -219,7 +219,7 @@
             document.getElementById('errorLog').innerHTML += "SISTEM HATASI: " + event.reason + "<br>";
         });
 
-        const COMPANY_NAMES = { 'AKBNK':'Akbank', 'ALARK':'Alarko Holding', 'ASELS':'Aselsan', 'ASTOR':'Astor Enerji', 'BIMAS':'BİM Mağazalar', 'BRSAN':'Borusan Boru', 'DOAS':'Doğuş Otomotiv', 'EKGYO':'Emlak Konut', 'ENKAI':'Enka İnşaat', 'EREGL':'Erdemir', 'FROTO':'Ford Otosan', 'GARAN':'Garanti BBVA', 'GUBRF':'Gübretaş', 'HEKTS':'Hektaş', 'ISCTR':'İş Bankası (C)', 'KCHOL':'Koç Holding', 'KONTR':'Kontrolmatik', 'KOZAL':'Koza Altın', 'KRDMD':'Kardemir (D)', 'ODAS':'Odaş Elektrik', 'OYAKC':'Oyak Çimento', 'PETKM':'Petkim', 'PGSUS':'Pegasus', 'SAHOL':'Sabancı Holding', 'SASA':'Sasa Polyester', 'SISE':'Şişecam', 'TCELL':'Turkcell', 'THYAO':'Türk Hava Yolları', 'TOASO':'Tofaş', 'TUPRS':'Tüpraş', 'YKBNK':'Yapı Kredi' };
+        const COMPANY_NAMES = { 'AEFES': 'Anadolu Efes', 'AGHOL': 'AG Anadolu Grubu', 'AHGAZ': 'Ahlatci Dogalgaz', 'AKBNK': 'Akbank', 'AKCNS': 'Akcansa', 'AKFGY': 'Akfen GYO', 'AKSEN': 'Aksa Enerji', 'ALARK': 'Alarko Holding', 'ALBRK': 'Albaraka Turk', 'ASGYO': 'Asce GYO', 'ASELS': 'Aselsan', 'ASTOR': 'Astor Enerji', 'AYDEM': 'Aydem Yenilenebilir', 'BAGFS': 'Bagfas', 'BERA': 'Bera Holding', 'BIMAS': 'BIM Magazalar', 'BIOEN': 'Biotrend Cevre', 'BRISA': 'Brisa', 'BRSAN': 'Borusan Boru', 'BUCIM': 'Bursa Cimento', 'CANTE': 'Can2 Termik', 'CCOLA': 'Coca Cola Icecek', 'CEMAS': 'Cemas Dokum', 'CIMSA': 'Cimsa', 'CWENE': 'CW Enerji', 'DOAS': 'Dogus Otomotiv', 'DOCO': 'DO & CO', 'DOGUB': 'Dogusan Boru', 'ECILC': 'Eczacibasi Ilac', 'EGEEN': 'Ege Endustri', 'EKGYO': 'Emlak Konut', 'ENJSA': 'Enerjisa', 'ENKAI': 'Enka Insaat', 'ENERY': 'Enerya Enerji', 'ERBOS': 'Erbosan', 'EREGL': 'Erdemir', 'EUREN': 'Europen Endustri', 'EUPWR': 'Europower Enerji', 'FENER': 'Fenerbahce', 'FROTO': 'Ford Otosan', 'GARAN': 'Garanti BBVA', 'GESAN': 'Girisim Elektrik', 'GLYHO': 'Global Yatirim', 'GSDHO': 'GSD Holding', 'GUBRF': 'Gubretas', 'GWIND': 'Galata Wind', 'HALKB': 'Halkbank', 'HEKTS': 'Hektas', 'TABGD': 'Tab Gida', 'ISCTR': 'Is Bankasi (C)', 'ISFIN': 'Is Finansal Kiralama', 'ISGYO': 'Is GYO', 'ISMEN': 'Is Yatirim Menkul', 'IZMDC': 'Izmir Demir Celik', 'KARSN': 'Karsan', 'KAYSE': 'Kayseri Seker', 'KCAER': 'Kocaer Celik', 'KCHOL': 'Koc Holding', 'KMPUR': 'Kimteks Poliuretan', 'KONTR': 'Kontrolmatik', 'KORDS': 'Kordsa', 'ALFAS': 'Alfa Solar', 'KOZAL': 'Koza Altin', 'KRDMA': 'Kardemir (A)', 'KRDMB': 'Kardemir (B)', 'KRDMD': 'Kardemir (D)', 'LOGO': 'Logo Yazilim', 'MAVI': 'Mavi Giyim', 'MGROS': 'Migros', 'MIATK': 'Mia Teknoloji', 'ODAS': 'Odas Elektrik', 'OTKAR': 'Otokar', 'OYAKC': 'Oyak Cimento', 'OYAYO': 'Oyak Yatirim', 'PETKM': 'Petkim', 'PGSUS': 'Pegasus', 'PSGYO': 'Pasifik GYO', 'QUAGR': 'Qua Granite', 'SAHOL': 'Sabanci Holding', 'SASA': 'Sasa Polyester', 'SISE': 'Sisecam', 'SMRTG': 'Smart Gunes', 'SOKM': 'Sok Marketler', 'TATGD': 'Tat Gida', 'TAVHL': 'TAV Havalimanlari', 'TCELL': 'Turkcell', 'THYAO': 'Turk Hava Yollari', 'TKFEN': 'Tekfen Holding', 'TOASO': 'Tofas', 'TRGYO': 'Torunlar GYO', 'TSKB': 'TSKB', 'TTKOM': 'Turk Telekom', 'TTRAK': 'Turk Traktor', 'TUKAS': 'Tukas', 'TUPRS': 'Tupras', 'ULKER': 'Ulker Biskuvi', 'VAKBN': 'Vakifbank', 'VESBE': 'Vestel Beyaz Esya', 'VESTL': 'Vestel', 'YKBNK': 'Yapi Kredi', 'YYLGD': 'Yayla Gida', 'ZOREN': 'Zorlu Enerji' };
         const colors = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#3949ab', '#00acc1'];
         
         function getColor(sym) { let hash = 0; for(let i=0; i<sym.length; i++) hash = sym.charCodeAt(i) + ((hash<<5)-hash); return colors[Math.abs(hash)%colors.length]; }
@@ -353,23 +353,16 @@
                 if(d.positions && d.positions.length > 0) {
                     d.positions.forEach(p => {
                         const isUp = p.pnl_pct > 0;
-                        const typeBadge = p.type === 'SHORT' ? '<span class="neon-badge-short">SHORT (VIOP)</span>' : '<span class="neon-badge-long">LONG (SPOT)</span>';
-                        const borderGlow = p.type === 'SHORT' ? 'border-left: 4px solid var(--neon-red);' : 'border-left: 4px solid var(--neon-green);';
+                        const borderGlow = 'border-left: 4px solid var(--neon-green);';
                         
                         // Risk Bar Calculation (assume 2% stop loss)
-                        let riskPct = 0;
+                        let dropPct = ((p.buy_price - p.current_price) / p.buy_price) * 100;
+                        let riskPct = Math.max(0, Math.min(100, (dropPct / 2.0) * 100)); // 2% drop = 100% risk
                         let riskColor = 'var(--neon-green)';
-                        if(p.type === 'LONG') {
-                            let dropPct = ((p.buy_price - p.current_price) / p.buy_price) * 100;
-                            riskPct = Math.max(0, Math.min(100, (dropPct / 2.0) * 100)); // 2% drop = 100% risk
-                        } else {
-                            let risePct = ((p.current_price - p.buy_price) / p.buy_price) * 100;
-                            riskPct = Math.max(0, Math.min(100, (risePct / 2.0) * 100));
-                        }
                         if(riskPct > 50) riskColor = '#ff9800';
                         if(riskPct > 80) riskColor = 'var(--neon-red)';
                         
-                        ph += `<div class="pos-card" style="${borderGlow}"><div class="pos-top"><div class="pos-sym">${p.symbol} ${typeBadge} <span style="font-size:11px; color:var(--text-muted); font-weight:normal; margin-left:8px;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color); text-shadow: ${isUp?'var(--glow-green)':(p.pnl_pct<0?'var(--glow-red)':'none')};">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
+                        ph += `<div class="pos-card" style="${borderGlow}"><div class="pos-top"><div class="pos-sym">${p.symbol}  <span style="font-size:11px; color:var(--text-muted); font-weight:normal; margin-left:8px;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color); text-shadow: ${isUp?'var(--glow-green)':(p.pnl_pct<0?'var(--glow-red)':'none')};">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
                         <div class="pos-details"><div>Maliyet: <b style="color:white;">${fmt(p.buy_price)}</b></div><div>Anlik: <b style="color:white;">${fmt(p.current_price)}</b></div></div>
                         
                         <div class="risk-bar-container">
