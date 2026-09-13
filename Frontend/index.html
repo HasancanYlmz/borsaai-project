@@ -322,9 +322,7 @@
             bge.innerText = pctStr;
             bge.className = 'badge ' + (isUp ? 'badge-up' : 'badge-down');
             
-            document.getElementById('mSellBtn').onclick = () => sellPosition(sym);
-            document.getElementById('mReportBtn').onclick = () => window.open('https://www.tradingview.com/chart/?symbol=BIST%3A'+sym, '_blank');
-            
+                                    
             currentChartSymbol = sym;
             
             // Reset buttons to 3A
