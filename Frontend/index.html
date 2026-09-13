@@ -292,7 +292,7 @@
                 chart.timeScale().fitContent();
                 currentChart = chart;
             }).catch(e => {
-                container.innerHTML = '<div style="text-align:center; padding:30px; color:#ff2a55;">Bağlantı Hatası</div>';
+                container.innerHTML = '<div style="text-align:center; padding:30px; color:#ff2a55;">Bağlantı Hatası: ' + String(e) + ': ' + String(e) + '</div>';
             });
         }
 
