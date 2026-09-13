@@ -32,7 +32,8 @@ async def main():
     await asyncio.gather(
         telegram_bot_listener(),
         start_mini_app_server(),
-        run_risk_manager(is_running)
+        run_ai_scorer_loop(),
+        run_analytics_scheduler()
     )
 
 if __name__ == "__main__":
