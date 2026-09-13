@@ -82,46 +82,25 @@ def score_stock_with_gemini(symbol, client):
         from sensors.fundamental_sensor import get_stock_fundamentals
         funds = get_stock_fundamentals(symbol)
         fund_text = (
-            f"F/K (P/E): {funds.get('pe_ratio', 'Bilinmiyor')}
-"
-            f"PD/DD (P/B): {funds.get('pb_ratio', 'Bilinmiyor')}
-"
-            f"Kurumsal Takas: %{funds.get('inst_holdings_pct', 0):.1f}
-"
+            f"F/K (P/E): {funds.get('pe_ratio', 'Bilinmiyor')}\n"
+            f"PD/DD (P/B): {funds.get('pb_ratio', 'Bilinmiyor')}\n"
+            f"Kurumsal Takas: %{funds.get('inst_holdings_pct', 0):.1f}\n"
             f"Hacim Sicramasi: {funds.get('volume_spike', 1):.1f}x"
         )
     except Exception:
         fund_text = "Finansal veriler cekilemedi."
 
     prompt = (
-        "Sen algoritmik ticaret sisteminin YZ analiztisinsin.
-"
-        "Hisse: BIST:" + symbol + "
-"
-        "Teknik Momentum: " + momentum_text + "
-"
-        "Finansal Temeller:
-" + fund_text + "
-"
-        "Son Haberler:
-" + news_text + "
-
-"
-        "Degerlendirme kriterleri:
-"
-        "1. Fiyat momentumu YUKSELIS trendinde mi?
-"
-        "2. Hacim artisi var mi?
-"
-        "3. Haberlerde cok kotu bir gelisme var mi?
-"
-        "4. Hisse temel acidan cok pahali mi (Ucuk F/K veya PD/DD var mi)?
-
-"
-        "Yaniti sadece su formatta ver:\n"
-        "KARAR: APPROVE veya REJECT\n"
-        "GUVEN: 0-100 arasi bir sayi\n"
-        "NEDEN: 1 cumle (Momentum ve habere dayanarak)"
+        "Sen algoritmik ticaret sisteminin YZ analiztisinsin.\n"
+        "Hisse: BIST:" + symbol + "\n"
+        "Teknik Momentum: " + momentum_text + "\n"
+        "Finansal Temeller:\n" + fund_text + "\n"
+        "Son Haberler:\n" + news_text + "\n\n"
+        "Degerlendirme kriterleri:\n"
+        "1. Fiyat momentumu YUKSELIS trendinde mi?\n"
+        "2. Hacim artisi var mi?\n"
+        "3. Haberlerde cok kotu bir gelisme var mi?\n"
+        "4. Hisse temel acidan cok pahali mi (Ucuk F/K veya PD/DD var mi)?\n\n"
     )
 
     try:
