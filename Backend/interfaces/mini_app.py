@@ -51,6 +51,14 @@ async def handle_tradingview_webhook(request):
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
 async def process_ai_and_buy(symbol: str, price: float):
+    from sensors.trend_filter import check_higher_timeframe_trend
+    from interfaces.telegram_bot import send_telegram_message
+    trend_ok, trend_msg = check_higher_timeframe_trend(symbol)
+    if not trend_ok:
+        msg = f"Trend Filtresi REDDI \n\nHisse: {symbol}\nSebep: {trend_msg}\n\nBoga tuzagi riski nedeniyle AL sinyali iptal edildi."
+        import asyncio
+        await asyncio.to_thread(send_telegram_message, msg)
+        return
     scores_file = r'C:\Users\Hasancan\Desktop\BorsaAI_Proje\Backend\data\ai_scores.json'
     decision = "APPROVE"
     confidence = 75.0
