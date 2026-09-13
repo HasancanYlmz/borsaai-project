@@ -457,65 +457,60 @@ async def api_sell(request):
 
 
 async def api_history(request):
-
     try:
-
         symbol = request.query.get("symbol")
-
+        p = request.query.get("period", "3A")
+        
+        if p == "1G":
+            yf_period = "1d"
+            yf_interval = "5m"
+        elif p == "1H":
+            yf_period = "5d"
+            yf_interval = "15m"
+        elif p == "1A":
+            yf_period = "1mo"
+            yf_interval = "1d"
+        elif p == "1Y":
+            yf_period = "1y"
+            yf_interval = "1d"
+        else:
+            yf_period = "3mo"
+            yf_interval = "1d"
+            
         import yfinance as yf
-
         import asyncio
-
         import pandas as pd
-
         import math
-
         ticker = f"{symbol}.IS"
-
         def fetch_data():
-
-            df = yf.download(ticker, period="3mo", interval="1d", progress=False)
-
+            df = yf.download(ticker, period=yf_period, interval=yf_interval, progress=False)
             if df.empty: return []
-
             data = []
-
             for date, row in df.iterrows():
-
                 try:
-
                     o = float(row["Open"].iloc[0] if isinstance(row["Open"], pd.Series) else row["Open"])
-
                     h = float(row["High"].iloc[0] if isinstance(row["High"], pd.Series) else row["High"])
-
                     l = float(row["Low"].iloc[0] if isinstance(row["Low"], pd.Series) else row["Low"])
-
                     c = float(row["Close"].iloc[0] if isinstance(row["Close"], pd.Series) else row["Close"])
-
                     v = float(row["Volume"].iloc[0] if isinstance(row["Volume"], pd.Series) else row["Volume"])
-
                     if math.isnan(o) or math.isnan(c): continue
-
+                    
+                    if yf_interval == "1d":
+                        t = date.strftime("%Y-%m-%d")
+                    else:
+                        t = int(date.timestamp()) + 10800
+                    
                     data.append({
-
-                        "time": date.strftime("%Y-%m-%d"),
-
-                        "open": o, "high": h, "low": l, "close": c, "value": v
-
+                        "time": t,
+                        "open": o, "high": h, "low": l, "close": c,
+                        "value": v
                     })
-
                 except:
-
                     continue
-
             return data
-
         data = await asyncio.to_thread(fetch_data)
-
         return web.json_response({"status": "success", "data": data})
-
     except Exception as e:
-
         return web.json_response({"status": "error", "message": str(e)})
 
 

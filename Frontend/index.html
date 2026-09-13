@@ -125,12 +125,22 @@
         #pull-refresh { text-align: center; color: var(--neon-cyan); font-size: 11px; font-weight: 700; height: 0; overflow: hidden; transition: height 0.2s; display: flex; align-items: center; justify-content: center; background: rgba(0, 229, 255, 0.05); }
         .neon-badge-long { background: rgba(0, 255, 163, 0.15); color: var(--neon-green); padding: 3px 8px; border-radius: 4px; font-size: 10px; margin-left: 8px; border: 1px solid rgba(0,255,163,0.3); box-shadow: var(--glow-green); }
         .neon-badge-short { background: rgba(255, 42, 85, 0.15); color: var(--neon-red); padding: 3px 8px; border-radius: 4px; font-size: 10px; margin-left: 8px; border: 1px solid rgba(255,42,85,0.3); box-shadow: var(--glow-red); }
-    </style>
+    
+        .chart-filters { display: flex; gap: 8px; margin-bottom: 15px; justify-content: center; }
+        .chart-filters button { background: rgba(35,49,77,0.5); border: 1px solid var(--border); color: #8292a8; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+        .chart-filters button:hover { background: rgba(0, 255, 163, 0.1); color: var(--accent); border-color: var(--accent); }
+        .chart-filters button.active { background: rgba(0, 255, 163, 0.2); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(0,255,163,0.3); }
+</style>
 </head>
 <body>
     <div id="errorLog"></div>
     <div id="pull-refresh"><span class="material-icons-round" style="font-size:16px; margin-right:5px; animation: spin 1s linear infinite;">sync</span> Guncelleniyor...</div>
-    <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+    <style>@keyframes spin { 100% { transform: rotate(360deg); } }
+        .chart-filters { display: flex; gap: 8px; margin-bottom: 15px; justify-content: center; }
+        .chart-filters button { background: rgba(35,49,77,0.5); border: 1px solid var(--border); color: #8292a8; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+        .chart-filters button:hover { background: rgba(0, 255, 163, 0.1); color: var(--accent); border-color: var(--accent); }
+        .chart-filters button.active { background: rgba(0, 255, 163, 0.2); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(0,255,163,0.3); }
+</style>
 
     <div class="app-header">
         <div class="app-title"><span class="material-icons-round" style="color:var(--neon-cyan); text-shadow: var(--glow-cyan);">show_chart</span>BorsaAI Terminal</div>
@@ -196,8 +206,17 @@
             <div class="mt-tab" onclick="switchModalTab('ozet', this)">TEMEL OZET</div>
         </div>
         <div class="modal-body">
+            
             <div id="tab-grafik" class="mt-content active">
+                <div class="chart-filters" id="chartFilters">
+                    <button onclick="loadChartData('1G')">1G</button>
+                    <button onclick="loadChartData('1H')">1H</button>
+                    <button onclick="loadChartData('1A')">1A</button>
+                    <button onclick="loadChartData('3A')" class="active">3A</button>
+                    <button onclick="loadChartData('1Y')">1Y</button>
+                </div>
                 <div id="tv-chart" style="height:450px; width:100%; border-radius:12px; overflow:hidden; border: 1px solid var(--border); box-shadow: inset 0 0 20px rgba(0,0,0,0.5);"></div>
+
             </div>
             <div id="tab-ozet" class="mt-content">
                 <div class="pc-grid" style="border:none; padding:0; gap:10px;">
@@ -244,20 +263,82 @@
 
         function closeStockModal() { document.getElementById('stockModal').classList.remove('open'); }
 
-        let currentChart = null;
-        function openStockModal(sym, price, pctStr, isUp) {
-            document.getElementById('mhSym').innerText = sym;
-            document.getElementById('mhName').innerText = COMPANY_NAMES[sym] || sym;
-            document.getElementById('mhLogo').innerText = sym.substring(0,2);
-            document.getElementById('mhLogo').style.background = getColor(sym);
-            document.getElementById('mhPrice').innerHTML = parseFloat(price).toFixed(2) + ' TL';
-            document.getElementById('mhPct').innerHTML = `<span class="sr-pct ${isUp?'pct-up':'pct-down'}">${pctStr}</span>`;
-            document.getElementById('stockModal').classList.add('open');
+        
+        let currentChartSymbol = '';
+        function loadChartData(period) {
+            // Update active class
+            document.querySelectorAll('#chartFilters button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
             
             const container = document.getElementById('tv-chart');
             container.innerHTML = '<div class="loading">Mum Grafik ve Hacim verisi yükleniyor...</div>';
             
-            fetch('/api/history?symbol=' + sym)
+            fetch('/api/history?symbol=' + currentChartSymbol + '&period=' + period)
+            .then(r => r.json())
+            .then(res => {
+                if(res.status !== 'success' || !res.data || res.data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:30px; color:#ff2a55;">Veri bulunamadı veya Bağlantı Hatası.</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                if (currentChart) currentChart.remove();
+                
+                const chart = LightweightCharts.createChart(container, {
+                    width: container.clientWidth, height: container.clientHeight,
+                    layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8292a8' },
+                    grid: { vertLines: { color: 'rgba(35, 49, 77, 0.5)' }, horzLines: { color: 'rgba(35, 49, 77, 0.5)' } },
+                    rightPriceScale: { borderVisible: false },
+                    timeScale: { borderVisible: false, fixLeftEdge: true, fixRightEdge: true, timeVisible: true },
+                });
+                
+                const candleSeries = chart.addCandlestickSeries({
+                    upColor: '#00ffa3', downColor: '#ff2a55', borderVisible: false,
+                    wickUpColor: '#00ffa3', wickDownColor: '#ff2a55'
+                });
+                
+                const volumeSeries = chart.addHistogramSeries({
+                    color: '#26a69a', priceFormat: { type: 'volume' },
+                    priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 }
+                });
+                
+                candleSeries.setData(res.data.map(d => ({time: d.time, open: d.open, high: d.high, low: d.low, close: d.close})));
+                volumeSeries.setData(res.data.map(d => ({time: d.time, value: d.value, color: d.close > d.open ? 'rgba(0,255,163,0.3)' : 'rgba(255,42,85,0.3)'})));
+                
+                chart.timeScale().fitContent();
+                currentChart = chart;
+            }).catch(e => {
+                container.innerHTML = '<div style="text-align:center; padding:30px; color:#ff2a55;">Bağlantı Hatası: ' + String(e) + '</div>';
+            });
+        }
+
+        let currentChart = null;
+        function openStockModal(sym, price, pctStr, isUp) {
+            document.getElementById('stockModal').classList.add('open');
+            document.getElementById('mhSym').innerText = sym;
+            document.getElementById('mhName').innerText = COMPANY_NAMES[sym] || '';
+            document.getElementById('mhPrice').innerText = price.toFixed(2) + ' TL';
+            let bge = document.getElementById('mhBadge');
+            bge.innerText = pctStr;
+            bge.className = 'badge ' + (isUp ? 'badge-up' : 'badge-down');
+            
+            document.getElementById('mSellBtn').onclick = () => sellPosition(sym);
+            document.getElementById('mReportBtn').onclick = () => window.open('https://www.tradingview.com/chart/?symbol=BIST%3A'+sym, '_blank');
+            
+            currentChartSymbol = sym;
+            
+            // Reset buttons to 3A
+            document.querySelectorAll('#chartFilters button').forEach(b => {
+                b.classList.remove('active');
+                if(b.innerText === '3A') b.classList.add('active');
+            });
+            
+            // Initial load
+            const container = document.getElementById('tv-chart');
+            container.innerHTML = '<div class="loading">Mum Grafik ve Hacim verisi yükleniyor...</div>';
+            
+            fetch('/api/history?symbol=' + sym + '&period=3A')
+
             .then(r => r.json())
             .then(res => {
                 if(res.status !== 'success' || !res.data || res.data.length === 0) {
