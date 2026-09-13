@@ -40,6 +40,19 @@ def get_daily_analytics():
 
 async def send_daily_report():
     from interfaces.telegram_bot import send_telegram_message
+    # KLU Katilim Fonu Nemalandirmasi (Bostaki nakdin faizsiz fon getirisi)
+    from core.database import get_portfolio, update_portfolio_cash
+    cash_balance, _ = get_portfolio()
+    if cash_balance > 100:  # Kasada 100 TL'den fazla bossa
+        # Yillik ~%40 Katilim Fonu Getirisi = Gunluk ~%0.109
+        daily_yield = cash_balance * 0.00109
+        new_cash = cash_balance + daily_yield
+        update_portfolio_cash(new_cash)
+        log_event('KLU_FON', f'Gun sonu bosta bekleyen nakde {daily_yield:.2f} TL katilim fonu (KLU) getirisi eklendi.')
+        klu_msg = f"\n💰 <b>KLU Fon Getirisi:</b> +{daily_yield:.2f} TL"
+    else:
+        klu_msg = ""
+
     a = get_daily_analytics()
     if a is None:
         msg = 'Bugun huc islem gercekkesmedi. Piyasa izleniyor...'
@@ -57,7 +70,7 @@ async def send_daily_report():
         f"u? Ort. Tutma:  {a['avg_dur']:.1f} dakika",
         f"u? En Iyi: {a['best']['symbol']} ({a['best']['pnl']:+2f} TL)",
         f"u? En Kotu: {a['worst']['symbol']} ({a['worst']['pnl']:+2f} TL)",
-        'u? BorsaAI v2.1 - Otomatik Rapor'
+        f'\n{klu_msg}\nu? BorsaAI v2.2 - Kurumsal Rapor'
     ]
     msg = '\n'.join(lines)
     await asyncio.to_thread(send_telegram_message, msg)

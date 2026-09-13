@@ -13,42 +13,41 @@ FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 async def handle_tradingview_webhook(request):
     try:
         data = await request.json()
-        if data.get("secret") != "BorsaAI_Gizli_Anahtar_2026":
-            return web.json_response({"status": "error", "message": "Unauthorized"}, status=401)
-            
-        symbol = data.get("symbol")
-        action = data.get("action")
-        price_str = data.get("price")
-        
+        symbol = data.get("symbol", "")
+        action = data.get("action", "").upper()
+        price = float(data.get("price", 0.0))
+
         if not symbol or not action:
-            return web.json_response({"status": "error", "message": "Missing fields"}, status=400)
-            
-        try:
-            price = float(price_str)
-        except:
-            price = 0.0
-            
-        log_event("WEBHOOK", f"TradingView Sinyali Alindi: {action} {symbol} @ {price}")
-        
-        from interfaces.telegram_bot import send_telegram_message
-        
-        if action == 'BUY':
-            msg_ilk = f"TRADINGVIEW SINYALI \n\n Hisse: {symbol}\n Yon: BUY\n Fiyat: {price} TL\n\n Yapay zeka haber onayi bekleniyor..."
-            send_telegram_message(msg_ilk)
+            return jsonify({"status": "error", "message": "Gecersiz Payload"}), 400
+
+        if action == "AL":
+            log_event("WEBHOOK", f"{symbol} icin AL sinyali alindi, YZ analizine gonderiliyor.")
             asyncio.create_task(process_ai_and_buy(symbol, price))
-            return web.json_response({"status": "success", "message": "ALIM isleme alindi"})
-        elif action == 'SELL':
-            msg_ilk = f"TRADINGVIEW SATIS SINYALI \n\n Hisse: {symbol}\n Yon: SELL\n Fiyat: {price} TL\n\n Otomatik satis tetikleniyor..."
-            send_telegram_message(msg_ilk)
+            return jsonify({"status": "received", "action": "buy_process_started"}), 200
+
+        elif action == "SAT":
+            log_event("WEBHOOK", f"{symbol} icin SAT sinyali alindi, satis basliyor.")
             from simulator.virtual_broker import execute_virtual_sell
-            asyncio.create_task(execute_virtual_sell(symbol, price, "TV Sell Sinyali"))
-            return web.json_response({"status": "success", "message": "SATIS isleme alindi"})
-        else:
-            return web.json_response({"status": "error", "message": "Bilinmeyen action"})
-        
+            asyncio.create_task(execute_virtual_sell(symbol, price, "TradingView Sinyali (SAT)"))
+            return jsonify({"status": "received", "action": "sell_executed"}), 200
+
+        elif action == "SHORT":
+            log_event("WEBHOOK", f"{symbol} icin SHORT sinyali alindi.")
+            from simulator.virtual_broker import execute_viop_short
+            asyncio.create_task(execute_viop_short(symbol, price, "TradingView SHORT Sinyali", 80.0))
+            return jsonify({"status": "received", "action": "short_executed"}), 200
+            
+        elif action in ["COVER", "SHORT_KAPAT"]:
+            log_event("WEBHOOK", f"{symbol} icin COVER sinyali alindi.")
+            from simulator.virtual_broker import execute_viop_cover
+            asyncio.create_task(execute_viop_cover(symbol, price, "TradingView COVER Sinyali"))
+            return jsonify({"status": "received", "action": "cover_executed"}), 200
+
+        return jsonify({"status": "ignored", "message": "Bilinmeyen Aksiyon"}), 200
+
     except Exception as e:
-        log_event("WEBHOOK_ERROR", f"Hata: {str(e)}", level="ERROR")
-        return web.json_response({"status": "error", "message": str(e)}, status=500)
+        log_event("WEBHOOK_ERROR", f"Hata: {e}", level="ERROR")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 async def process_ai_and_buy(symbol: str, price: float):
     from sensors.trend_filter import check_higher_timeframe_trend

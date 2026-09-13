@@ -156,3 +156,27 @@ def get_daily_trades(today: str):
     q_sq = 'SELECT symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time FROM trade_history WHERE sell_time LIKE ? ORDER BY sell_time DESC'
     q_pg = 'SELECT symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time FROM trade_history WHERE sell_time LIKE %s ORDER BY sell_time DESC'
     return _execute(q_sq, q_pg, (today + '%',), fetch='all')
+
+def init_viop_db():
+    q_sq = 'CREATE TABLE IF NOT EXISTS viop_trades (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT UNIQUE, short_price REAL, lot_amount INTEGER, short_time TEXT, lowest_seen REAL)'
+    q_pg = 'CREATE TABLE IF NOT EXISTS viop_trades (id SERIAL PRIMARY KEY, symbol TEXT UNIQUE, short_price REAL, lot_amount INTEGER, short_time TEXT, lowest_seen REAL)'
+    _execute(q_sq, q_pg)
+
+def save_viop_trade(symbol: str, short_price: float, lot_amount: int):
+    q_sq = 'INSERT OR REPLACE INTO viop_trades (symbol, short_price, lot_amount, short_time, lowest_seen) VALUES (?, ?, ?, ?, ?)'
+    q_pg = """INSERT INTO viop_trades (symbol, short_price, lot_amount, short_time, lowest_seen) VALUES (%s, %s, %s, %s, %s)
+              ON CONFLICT (symbol) DO UPDATE SET 
+              short_price = EXCLUDED.short_price,
+              lot_amount = EXCLUDED.lot_amount,
+              short_time = EXCLUDED.short_time,
+              lowest_seen = EXCLUDED.lowest_seen"""
+    from core.utils import get_ist_time_str
+    _execute(q_sq, q_pg, (symbol, float(short_price), int(lot_amount), get_ist_time_str(), float(short_price)))
+
+def get_viop_trades():
+    return _execute('SELECT symbol, short_price, lot_amount, short_time, lowest_seen FROM viop_trades', 'SELECT symbol, short_price, lot_amount, short_time, lowest_seen FROM viop_trades', fetch='all')
+
+def remove_viop_trade(symbol: str):
+    _execute('DELETE FROM viop_trades WHERE symbol = ?', 'DELETE FROM viop_trades WHERE symbol = %s', (symbol,))
+
+init_viop_db()
