@@ -16,7 +16,7 @@ TARGET_STOCKS = [
 
 SCORES_FILE = r'C:\Users\Hasancan\Desktop\BorsaAI_Proje\Backend\data\ai_scores.json'
 
-def fetch_turkish_news(symbol):
+def fetch_turkish_news_deprecated(symbol):
     try:
         url = f"https://news.google.com/rss/search?q={symbol}+hisse+kap&hl=tr&gl=TR&ceid=TR:tr"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -69,7 +69,13 @@ def get_market_regime():
         return "BULL"
 
 def score_stock_with_gemini(symbol, client):
-    news_text = fetch_turkish_news(symbol)
+    try:
+        from sensors.kap_scraper import get_kap_news
+        news_list = get_kap_news(symbol)
+        news_text = '\n'.join(news_list) if news_list else 'Haber yok.'
+    except Exception as e:
+        news_text = 'Haber motoru calismadi.'
+
     momentum_text = get_price_momentum(symbol)
 
     prompt = (

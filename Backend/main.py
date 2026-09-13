@@ -12,7 +12,7 @@ from agents.ai_scorer import run_ai_scorer_loop
 from core.analytics import run_analytics_scheduler
 from interfaces.telegram_bot import telegram_bot_listener
 from interfaces.mini_app import start_mini_app_server
-# from simulator.risk_manager import run_risk_manager
+from simulator.risk_manager import run_risk_manager
 
 IS_RUNNING = True
 
@@ -33,7 +33,8 @@ async def main():
         telegram_bot_listener(),
         start_mini_app_server(),
         run_ai_scorer_loop(),
-        run_analytics_scheduler()
+        run_analytics_scheduler(),
+        run_risk_manager()
     )
 
 if __name__ == "__main__":

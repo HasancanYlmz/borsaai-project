@@ -1,164 +1,153 @@
-﻿import sqlite3
 import os
 import threading
 from datetime import datetime
 from typing import List, Tuple
 from decimal import Decimal
 import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from core.utils import get_ist_time_str
 
-if os.getenv("RAILWAY_VOLUME"):
-    DB_PATH = os.path.join(os.getenv("RAILWAY_VOLUME"), "borsa_memory.db")
+LOCAL_DB_PATH = os.path.join(os.path.dirname(__file__), 'borsa_memory.db')
+DATABASE_URL = os.getenv("DATABASE_URL")
+DB_LOCK = threading.Lock()
+
+_IS_POSTGRES = bool(DATABASE_URL)
+
+if _IS_POSTGRES:
+    import psycopg2
+    import psycopg2.extras
 else:
-    DB_PATH = os.path.join(os.path.dirname(__file__), 'borsa_memory.db')
-db_lock = threading.Lock()
+    import sqlite3
 
 def get_connection():
-    return sqlite3.connect(DB_PATH, check_same_thread=False)
+    if _IS_POSTGRES:
+        return psycopg2.connect(DATABASE_URL + '?sslmode=prefer')
+    else:
+        return sqlite3.connect(LOCAL_DB_PATH, check_same_thread=False)
+
+def _execute(query_sqlite, query_pg, params=(), fetch=None):
+    with DB_LOCK:
+        conn = get_connection()
+        cursor = conn.cursor()
+        result = None
+        try:
+            if _IS_POSTGRES:
+                cursor.execute(query_pg, params)
+            else:
+                cursor.execute(query_sqlite, params)
+                
+            if fetch == 'all':
+                result = cursor.fetchall()
+            elif fetch == 'one':
+                result = cursor.fetchone()
+            else:
+                conn.commit()
+        finally:
+            conn.close()
+        return result
 
 def init_db():
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS signals_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT, symbol TEXT, signal_type TEXT,
-            regime TEXT, confidence_score REAL, reason TEXT)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS portfolio (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            cash_balance REAL, total_equity REAL)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS active_trades (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            symbol TEXT UNIQUE, buy_price REAL,
-            lot_amount INTEGER, remaining_lots INTEGER, buy_time TEXT, highest_seen REAL)''')
-            
-        # SCHEMA MIGRATION FOR EXISTING DB
-        cursor.execute("PRAGMA table_info(active_trades)")
-        cols = [info[1] for info in cursor.fetchall()]
-        if "remaining_lots" not in cols:
-            cursor.execute("ALTER TABLE active_trades ADD COLUMN remaining_lots INTEGER DEFAULT 0")
-        if "highest_seen" not in cols:
-            cursor.execute("ALTER TABLE active_trades ADD COLUMN highest_seen REAL DEFAULT 0.0")
-            
-        cursor.execute('''CREATE TABLE IF NOT EXISTS trade_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            symbol TEXT, buy_price REAL, sell_price REAL,
-            lot_amount INTEGER, pnl REAL, reason TEXT,
-            buy_time TEXT, sell_time TEXT)''')
+    q1_sq = '''CREATE TABLE IF NOT EXISTS signals_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT, symbol TEXT, signal_type TEXT,
+        regime TEXT, confidence_score REAL, reason TEXT)'''
+    q1_pg = '''CREATE TABLE IF NOT EXISTS signals_history (
+        id SERIAL PRIMARY KEY,
+        timestamp TEXT, symbol TEXT, signal_type TEXT,
+        regime TEXT, confidence_score REAL, reason TEXT)'''
+    _execute(q1_sq, q1_pg)
+    
+    q2_sq = '''CREATE TABLE IF NOT EXISTS portfolio (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        cash_balance REAL, total_equity REAL)'''
+    q2_pg = '''CREATE TABLE IF NOT EXISTS portfolio (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        cash_balance REAL, total_equity REAL)'''
+    _execute(q2_sq, q2_pg)
 
-        cursor.execute("SELECT COUNT(*) FROM portfolio")
-        if cursor.fetchone()[0] == 0:
-            cursor.execute("INSERT INTO portfolio (id, cash_balance, total_equity) VALUES (1, 12000.0, 12000.0)")
-            print("[INFO] Simulator portfolio initialized with default 12,000 TRY balance.")
+    q3_sq = '''CREATE TABLE IF NOT EXISTS active_trades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT UNIQUE, buy_price REAL,
+        lot_amount INTEGER, remaining_lots INTEGER, buy_time TEXT, highest_seen REAL)'''
+    q3_pg = '''CREATE TABLE IF NOT EXISTS active_trades (
+        id SERIAL PRIMARY KEY,
+        symbol TEXT UNIQUE, buy_price REAL,
+        lot_amount INTEGER, remaining_lots INTEGER, buy_time TEXT, highest_seen REAL)'''
+    _execute(q3_sq, q3_pg)
 
-        cursor.execute("SELECT COUNT(*) FROM active_trades")
-        if cursor.fetchone()[0] == 0:
-            cursor.execute("UPDATE portfolio SET cash_balance = 12000.0, total_equity = 12000.0")
+    q4_sq = '''CREATE TABLE IF NOT EXISTS trade_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT, buy_price REAL, sell_price REAL,
+        lot_amount INTEGER, pnl REAL, reason TEXT,
+        buy_time TEXT, sell_time TEXT, duration_minutes REAL)'''
+    q4_pg = '''CREATE TABLE IF NOT EXISTS trade_history (
+        id OID OR SERIAL,  -- we don't care, use SERIAL
+        id SERIAL PRIMARY KEY,
+        symbol TEXT, buy_price REAL, sell_price REAL,
+        lot_amount INTEGER, pnl REAL, reason TEXT,
+        buy_time TEXT, sell_time TEXT, duration_minutes REAL)'''
+    _execute(q4_sq, q4_pg)
 
+    c5 = _execute('SELECT COUNT(*) FROM portfolio', 'SELECT COUNT(*) FROM portfolio', fetch='one')
+    if c5[0] == 0:
+        _execute('INSERT INTO portfolio (id, cash_balance, total_equity) VALUES (1, 12000.0, 12000.0)',
+                 'INSERT INTO portfolio (id, cash_balance, total_equity) VALUES (1, 12000.0, 12000.0)')
 
-        
-        # Temizlik: Eski veritabanindan kalan 0 lotlu hayalet islemleri sil
-        cursor.execute("DELETE FROM active_trades WHERE remaining_lots <= 0")
+    c6 = _execute('SELECT COUNT(*) FROM active_trades', 'SELECT COUNT(*) FROM active_trades', fetch='one')
+    if c6[0] == 0:
+        _execute('UPDATE portfolio SET cash_balance = 12000.0, total_equity = 12000.0',
+                 'UPDATE portfolio SET cash_balance = 12000.0, total_equity = 12000.0')
 
-        conn.commit()
-        conn.close()
+    _execute('DELETE FROM active_trades WHERE remaining_lots <= 0', 'DELETE FROM active_trades WHERE remaining_lots <= 0')
 
 def save_signal(symbol: str, signal_type: str, regime: str, confidence: float, reason: str):
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            'INSERT INTO signals_history (timestamp, symbol, signal_type, regime, confidence_score, reason) VALUES (?, ?, ?, ?, ?, ?)',
-            (get_ist_time_str(), symbol, signal_type, regime, confidence, reason))
-        conn.commit()
-        conn.close()
+    q_sq = 'INSERT INTO signals_history (timestamp, symbol, signal_type, regime, confidence_score, reason) VALUES (?, ?, ?, ?, ?, ?)'
+    q_pg = 'INSERT INTO signals_history (timestamp, symbol, signal_type, regime, confidence_score, reason) VALUES (%s, %s, %s, %s, %s, %s)'
+    _execute(q_sq, q_pg, (get_ist_time_str(), symbol, signal_type, regime, confidence, reason))
 
-def get_recent_signals(limit: int = 50) -> List[Tuple]:
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            'SELECT timestamp, symbol, signal_type, regime, confidence_score, reason FROM signals_history ORDER BY id DESC LIMIT ?',
-            (limit,))
-        rows = cursor.fetchall()
-        conn.close()
-        return rows
+def get_recent_signals(imit: int = 50) -> List[Tuple]:
+    q_sq = 'SELECT timestamp, symbol, signal_type, regime, confidence_score, reason FROM signals_history ORDER BY id DESC LIMIT ?'
+    q_pg = 'SELECT timestamp, symbol, signal_type, regime, confidence_score, reason FROM signals_history ORDER BY id DESC LIMIT %s'
+    return _execute(q_sq, q_pg, (imit,), fetch='all')
 
 def save_trade(symbol: str, buy_price: Decimal, lot_amount: int):
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            'INSERT OR REPLACE INTO active_trades (symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen) VALUES (?, ?, ?, ?, ?, ?)',
-            (symbol, float(buy_price), lot_amount, lot_amount, get_ist_time_str(), float(buy_price)))
-        conn.commit()
-        conn.close()
+    q_sq = 'INSERT OR REPLACE INTO active_trades (symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen) VALUES (?, ?, ?, ?, ?, ?)'
+    q_pg = '''INSERT INTO active_trades (symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen) VALUES (%s, %s, %s, %s, %s, %s)
+             ON CONFLICT (symbol) DO UPDATE SET 
+             buy_price = EXCLUDED.buy_price,
+             lot_amount = EXCLUDED.lot_amount,
+             remaining_lots = EXCLUDED.remaining_lots,
+             buy_time = EXCLUDED.buy_time,
+             highest_seen = EXCLUDED.highest_seen'''
+    _execute(q_sq, q_pg, (symbol, float(buy_price), lot_amount, lot_amount, get_ist_time_str(), float(buy_price)))
 
 def update_trade_lots_and_highest(symbol: str, remaining_lots: int, highest_seen: float):
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('UPDATE active_trades SET remaining_lots = ?, highest_seen = ? WHERE symbol = ?', (remaining_lots, highest_seen, symbol))
-        conn.commit()
-        conn.close()
+    q_sq = 'UPDATE active_trades SET remaining_lots = ?, highest_seen = ? WHERE symbol = ?'
+    q_pg = 'UPDATE active_trades SET remaining_lots = %s, highest_seen = %s WHERE symbol = %s'
+    _execute(q_sq, q_pg, (remaining_lots, highest_seen, symbol))
 
 def get_active_trades() -> List[Tuple]:
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen FROM active_trades')
-        rows = cursor.fetchall()
-        conn.close()
-        return rows
-
-def get_active_symbols() -> List[str]:
-    trades = get_active_trades()
-    return [row[0] for row in trades]
+    return _execute('SELECT symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen FROM active_trades', 'SELECT symbol, buy_price, lot_amount, remaining_lots, buy_time, highest_seen FROM active_trades', fetch='all')
 
 def remove_trade(symbol: str, sell_price: float = 0.0, pnl: float = 0.0, reason: str = "", lots_sold: int = 0):
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT buy_price, buy_time FROM active_trades WHERE symbol = ?', (symbol,))
-        row = cursor.fetchone()
-        if row:
-            buy_price, buy_time = row
-            cursor.execute('''
-                INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (symbol, buy_price, sell_price, lots_sold, pnl, reason, buy_time, get_ist_time_str()))
-            
-        cursor.execute('DELETE FROM active_trades WHERE symbol = ?', (symbol,))
-        conn.commit()
-        conn.close()
+    row = _execute('SELECT buy_price, buy_time FROM active_trades WHERE symbol = ?', 'SELECT buy_price, buy_time FROM active_trades WHERE symbol = %s', (symbol,), fetch='one')
+    if row:
+        buy_price, buy_time = row
+        q_sq = 'INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        q_pg = 'INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+        _execute(q_sq, q_pg, (symbol, buy_price, sell_price, lots_sold, pnl, reason, buy_time, get_ist_time_str()))
+    _execute('DELETE FROM active_trades WHERE symbol = ?', 'DELETE FROM active_trades WHERE symbol = %s', (symbol,))
 
 def log_partial_sale(symbol: str, buy_price: float, sell_price: float, lots_sold: int, pnl: float, reason: str, buy_time: str):
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (symbol, buy_price, sell_price, lots_sold, pnl, reason, buy_time, get_ist_time_str()))
-        conn.commit()
-        conn.close()
+    q_sq = 'INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    q_pg = 'INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+    _execute(q_sq, q_pg, (symbol, buy_price, sell_price, lots_sold, pnl, reason, buy_time, get_ist_time_str()))
 
 def update_portfolio_cash(new_cash: Decimal):
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('UPDATE portfolio SET cash_balance = ? WHERE id = 1', (float(new_cash),))
-        conn.commit()
-        conn.close()
+    _execute('UPDATE portfolio SET cash_balance = ? WHERE id = 1', 'UPDATE portfolio SET cash_balance = %s WHERE id = 1', (float(new_cash),))
 
 def get_portfolio() -> Tuple:
-    with db_lock:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT cash_balance, total_equity FROM portfolio WHERE id = 1')
-        row = cursor.fetchone()
-        conn.close()
-        return row
+    return _execute('SELECT cash_balance, total_equity FROM portfolio WHERE id = 1', 'SELECT cash_balance, total_equity FROM portfolio WHERE id = 1', fetch='one')
 
 init_db()
