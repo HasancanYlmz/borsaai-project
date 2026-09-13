@@ -160,7 +160,7 @@
             <div class="pc-title">Sanal Kasa (Başlangıç: 12.000 TL)</div>
             <div class="pc-value" id="portTotalValue">0,00 TL <span class="pc-pct pct-flat" id="portTotalPct">+%0.00</span></div>
             
-            <div class="equity-container" id="equityChartContainer"></div>
+            
             
             <div class="pc-grid">
                 <div><div class="pc-item-lbl">NAKIT (LIKIT)</div><div class="pc-item-val" id="portCash">0,00 TL</div></div>
@@ -237,7 +237,7 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('view-' + viewId).classList.add('active');
             el.classList.add('active');
-            if(viewId === 'portfoy' && !equityChartInit) initEquityChart();
+            
         }
 
         function switchModalTab(tabId, el) {
@@ -319,15 +319,7 @@
         }
         document.getElementById('searchInput').addEventListener('input', filterPiyasa);
 
-        let equityChartInit = false;
-        let eqChart = null;
-        let eqSeries = null;
-        function initEquityChart() {
-            const container = document.getElementById('equityChartContainer');
-            if(!container) return;
-            eqChart = LightweightCharts.createChart(container, {
-                width: container.clientWidth, height: container.clientHeight,
-                layout: { background: { type: 'solid', color: 'transparent' }, textColor: 'transparent' },
+        , textColor: 'transparent' },
                 grid: { vertLines: { visible: false }, horzLines: { visible: false } },
                 rightPriceScale: { visible: false }, timeScale: { visible: false },
                 handleScroll: false, handleScale: false
@@ -373,21 +365,7 @@
                 document.getElementById('portCash').innerText = fmt(d.total_cash);
                 document.getElementById('portEquity').innerText = fmt(d.total_portfolio_value - d.total_cash);
                 
-                // Update Equity Curve Mock Data (ending at real value)
-                if(equityChartInit && eqSeries) {
-                    let mockData = [];
-                    let base = 12000;
-                    let target = d.total_portfolio_value;
-                    let step = (target - base) / 20;
-                    let now = new Date();
-                    for(let i=20; i>=0; i--) {
-                        let d = new Date(now.getTime() - i*86400000);
-                        let val = base + step*(20-i) + (Math.random()*100 - 50); // add some noise
-                        if(i===0) val = target;
-                        mockData.push({time: d.toISOString().split('T')[0], value: val});
-                    }
-                    eqSeries.setData(mockData);
-                }
+                
 
                 let ph = '';
                 if(d.positions && d.positions.length > 0) {
