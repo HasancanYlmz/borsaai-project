@@ -317,7 +317,7 @@
             document.getElementById('stockModal').classList.add('open');
             document.getElementById('mhSym').innerText = sym;
             document.getElementById('mhName').innerText = COMPANY_NAMES[sym] || '';
-            document.getElementById('mhPrice').innerText = price.toFixed(2) + ' TL';
+            document.getElementById('mhPrice').innerText = parseFloat(price).toFixed(2) + ' TL';
             let bge = document.getElementById('mhBadge');
             bge.innerText = pctStr;
             bge.className = 'badge ' + (isUp ? 'badge-up' : 'badge-down');
