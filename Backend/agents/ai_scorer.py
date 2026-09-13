@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import asyncio
 import urllib.request
@@ -53,6 +53,20 @@ def get_price_momentum(symbol):
     except Exception as e:
         return f'Momentum hesaplanamadi: {str(e)}'
 
+
+
+def get_market_regime():
+    try:
+        ticker = yf.Ticker("XU100.IS")
+        hist = ticker.history(period="2d")
+        if len(hist) < 2: return "BULL"
+        change_pct = ((hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2]) * 100
+        if change_pct < -2.5:
+            return "BEAR"
+        return "BULL"
+    except Exception as e:
+        print(f"XU100 Hata: {e}")
+        return "BULL"
 
 def score_stock_with_gemini(symbol, client):
     news_text = fetch_turkish_news(symbol)

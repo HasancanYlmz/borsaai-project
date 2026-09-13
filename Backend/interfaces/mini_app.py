@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 import asyncio
 from aiohttp import web
@@ -31,12 +31,20 @@ async def handle_tradingview_webhook(request):
         log_event("WEBHOOK", f"TradingView Sinyali Alindi: {action} {symbol} @ {price}")
         
         from interfaces.telegram_bot import send_telegram_message
-        msg_ilk = f"🚨 <b>TRADINGVIEW SINYALI</b> 🚨\n\n📌 <b>Hisse:</b> {symbol}\n🎯 <b>Yon:</b> {action}\n💰 <b>Fiyat:</b> {price} TL\n\n<i>Yapay zeka haber onayi bekleniyor...</i>"
-        send_telegram_message(msg_ilk)
         
-        asyncio.create_task(process_ai_and_buy(symbol, price))
-        
-        return web.json_response({"status": "success", "message": "Sinyal isleme alindi"})
+        if action == 'BUY':
+            msg_ilk = f"TRADINGVIEW SINYALI \n\n Hisse: {symbol}\n Yon: BUY\n Fiyat: {price} TL\n\n Yapay zeka haber onayi bekleniyor..."
+            send_telegram_message(msg_ilk)
+            asyncio.create_task(process_ai_and_buy(symbol, price))
+            return web.json_response({"status": "success", "message": "ALIM isleme alindi"})
+        elif action == 'SELL':
+            msg_ilk = f"TRADINGVIEW SATIS SINYALI \n\n Hisse: {symbol}\n Yon: SELL\n Fiyat: {price} TL\n\n Otomatik satis tetikleniyor..."
+            send_telegram_message(msg_ilk)
+            from simulator.virtual_broker import execute_virtual_sell
+            asyncio.create_task(execute_virtual_sell(symbol, price, "TV Sell Sinyali"))
+            return web.json_response({"status": "success", "message": "SATIS isleme alindi"})
+        else:
+            return web.json_response({"status": "error", "message": "Bilinmeyen action"})
         
     except Exception as e:
         log_event("WEBHOOK_ERROR", f"Hata: {str(e)}", level="ERROR")
