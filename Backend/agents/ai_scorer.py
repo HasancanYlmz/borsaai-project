@@ -57,31 +57,19 @@ def get_price_momentum(symbol):
 def score_stock_with_gemini(symbol, client):
     news_text = fetch_turkish_news(symbol)
     momentum_text = get_price_momentum(symbol)
+
     prompt = (
-        "Sen algoritmik ticaret sisteminin YZ analiztisinsin.
-"
-        f"Hisse: BIST:{symbol}
-"
-        f"Teknik Momentum: {momentum_text}
-"
-        f"Son Haberler: {news_text}
-
-"
-        "Degerlendirme kriterleri:
-"
-        "1. Fiyat momentumu YUKSELIS trendinde mi?
-"
-        "2. Hacim artisi var mi?
-"
-        "3. Haberlerde cok kotu bir gelisme var mi?
-
-"
-        "Yaniti sadece su formatta ver:
-"
-        "KARAR: APPROVE veya REJECT
-"
-        "GUVEN: 0-100 arasi bir sayi
-"
+        "Sen algoritmik ticaret sisteminin YZ analiztisinsin.\n"
+        "Hisse: BIST:" + symbol + "\n"
+        "Teknik Momentum: " + momentum_text + "\n"
+        "Son Haberler: " + news_text + "\n\n"
+        "Degerlendirme kriterleri:\n"
+        "1. Fiyat momentumu YUKSELIS trendinde mi?\n"
+        "2. Hacim artisi var mi?\n"
+        "3. Haberlerde cok kotu bir gelisme var mi?\n\n"
+        "Yaniti sadece su formatta ver:\n"
+        "KARAR: APPROVE veya REJECT\n"
+        "GUVEN: 0-100 arasi bir sayi\n"
         "NEDEN: 1 cumle (Momentum ve habere dayanarak)"
     )
 
@@ -90,47 +78,24 @@ def score_stock_with_gemini(symbol, client):
             model='gemini-2.5-flash',
             contents=prompt,
         )
-        
         decision = "APPROVE"
         confidence = 50.0
         reason = "Analiz yapildi."
-        
         for line in response.text.split('\n'):
-            line = line.strip().upper()
-            if line.startswith("KARAR:"):
-                decision = line.replace("KARAR:", "").strip()
-            elif line.startswith("GUVEN:"):
+            l = line.strip().upper()
+            if l.startswith("KARAR:"):
+                decision = l.replace("KARAR:", "").strip()
+            elif l.startswith("GUVEN:"):
                 try:
-                    confidence = float(line.replace("GUVEN:", "").replace("%", "").strip())
-                except:
+                    confidence = float(l.replace("GUVEN:", "").replace("%", "").strip())
+                except Exception:
                     pass
-            elif line.startswith("NEDEN:"):
-                reason = line.replace("NEDEN:", "").strip()
-                
+            elif l.startswith("NEDEN:"):
+                reason = l.replace("NEDEN:", "").strip()
         return {"decision": decision, "confidence": confidence, "reason": reason}
     except Exception as e:
-        return {"decision": "APPROVE", "confidence": 50.0, "reason": f"AI Hatasi: {str(e)}"}
+        return {"decision": "APPROVE", "confidence": 50.0, "reason": "AI Hatasi: " + str(e)}
 
-
-def get_market_regime():
-    try:
-        ticker = yf.Ticker("XU100.IS")
-        hist = ticker.history(period="2d")
-        if len(hist) < 2: return "BULL"
-        
-        close_yesterday = hist['Close'].iloc[0]
-        close_today = hist['Close'].iloc[1]
-        
-        # Eger endeks dune gore %0.5'ten fazla eksideyse BEAR (Ayı) piyasasi diyelim
-        # Ya da sadece kirmiziysa BEAR diyelim.
-        change_pct = ((close_today - close_yesterday) / close_yesterday) * 100
-        
-        if change_pct < -2.5:
-            return "BEAR"
-        return "BULL"
-    except Exception as e:
-        print(f"XU100 Hata: {e}")
-        return "BULL"
 
 async def run_ai_scorer_loop():
     api_key = os.getenv("GEMINI_API_KEY")
