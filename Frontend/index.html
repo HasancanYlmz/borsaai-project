@@ -73,11 +73,9 @@
         .pc-title { font-size: 11px; color: var(--neon-cyan); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 0 5px rgba(0,229,255,0.5); text-align: center; }
         .pc-value { font-size: 32px; font-weight: 800; color: white; display: flex; justify-content: center; align-items: baseline; gap: 10px; text-shadow: 0 2px 10px rgba(255,255,255,0.2); }
         .pc-pct { font-size: 12px; padding: 4px 8px; border-radius: 6px; position: relative; top: -6px; border: 1px solid rgba(255,255,255,0.1); }
-        .pc-grid { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 15px; position: relative; z-index: 1; }
+        .pc-grid { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 15px; position: relative; z-index: 1; border-top: 1px solid rgba(0,229,255,0.1); }
         .pc-item-lbl { font-size: 10px; color: var(--text-muted); font-weight: 700; }
         .pc-item-val { font-size: 14px; font-weight: 700; color: white; margin-top: 4px; }
-        
-        .equity-container { margin-top: 15px; height: 60px; width: 100%; border-top: 1px solid rgba(0,229,255,0.1); padding-top: 10px; }
 
         .pos-card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative; }
         .pos-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -160,8 +158,6 @@
             <div class="pc-title">Sanal Kasa (Başlangıç: 12.000 TL)</div>
             <div class="pc-value" id="portTotalValue">0,00 TL <span class="pc-pct pct-flat" id="portTotalPct">+%0.00</span></div>
             
-            
-            
             <div class="pc-grid">
                 <div><div class="pc-item-lbl">NAKIT (LIKIT)</div><div class="pc-item-val" id="portCash">0,00 TL</div></div>
                 <div style="text-align:right;"><div class="pc-item-lbl">POZISYON DEGERI</div><div class="pc-item-val" id="portEquity">0,00 TL</div></div>
@@ -237,7 +233,6 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('view-' + viewId).classList.add('active');
             el.classList.add('active');
-            
         }
 
         function switchModalTab(tabId, el) {
@@ -319,17 +314,6 @@
         }
         document.getElementById('searchInput').addEventListener('input', filterPiyasa);
 
-        , textColor: 'transparent' },
-                grid: { vertLines: { visible: false }, horzLines: { visible: false } },
-                rightPriceScale: { visible: false }, timeScale: { visible: false },
-                handleScroll: false, handleScale: false
-            });
-            eqSeries = eqChart.addAreaSeries({
-                lineColor: '#00e5ff', topColor: 'rgba(0, 229, 255, 0.4)', bottomColor: 'rgba(0, 229, 255, 0.0)', lineWidth: 2
-            });
-            equityChartInit = true;
-        }
-
         function loadData() {
             fetch('/api/market')
             .then(r => r.json())
@@ -365,8 +349,6 @@
                 document.getElementById('portCash').innerText = fmt(d.total_cash);
                 document.getElementById('portEquity').innerText = fmt(d.total_portfolio_value - d.total_cash);
                 
-                
-
                 let ph = '';
                 if(d.positions && d.positions.length > 0) {
                     d.positions.forEach(p => {
