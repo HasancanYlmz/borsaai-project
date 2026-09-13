@@ -61,7 +61,7 @@ async def process_ai_and_buy(symbol: str, price: float):
     from sensors.advanced_filters import check_rsi_cross_validation
     rsi_ok, rsi_msg = check_rsi_cross_validation(symbol)
     if not rsi_ok:
-        msg = f"⛔ RSI Dogrulama REDDI \n\nHisse: {symbol}\nSebep: {rsi_msg}\n\nTV Sinyali sismis/gecikmeli olabilir."
+        msg = f" RSI Dogrulama REDDI \n\nHisse: {symbol}\nSebep: {rsi_msg}\n\nTV Sinyali sismis/gecikmeli olabilir."
         import asyncio
         await asyncio.to_thread(send_telegram_message, msg)
         return
@@ -86,7 +86,7 @@ async def process_ai_and_buy(symbol: str, price: float):
     from interfaces.telegram_bot import send_telegram_message
     
     if regime == "BEAR":
-        msg = f"⛔ <b>PİYASA FİLTRESİ REDDİ</b> ⛔\n\n🏢 <b>Hisse:</b> {symbol}\n⚠️ BIST100 düşüş trendinde (BEAR). Sistem güvenli modda olduğu için alım durduruldu."
+        msg = f" <b>PİYASA FİLTRESİ REDDİ</b> \n\n <b>Hisse:</b> {symbol}\n️ BIST100 düşüş trendinde (BEAR). Sistem güvenli modda olduğu için alım durduruldu."
         await asyncio.to_thread(send_telegram_message, msg)
         log_event("AI_AGENT", f"{symbol} reddedildi: Piyasa Rejimi BEAR")
         return
@@ -94,14 +94,19 @@ async def process_ai_and_buy(symbol: str, price: float):
     if decision == "APPROVE" and confidence >= 60.0:
         await execute_virtual_buy(symbol, price, reason, confidence)
     else:
-        msg = f"🛑 <b>YZ TARAFINDAN REDDEDILDI</b> 🛑\n\n🏢 <b>Hisse:</b> {symbol}\n📊 <b>Skor:</b> %{confidence}\n📉 <b>Neden:</b> {reason}"
+        msg = f" <b>YZ TARAFINDAN REDDEDILDI</b> \n\n <b>Hisse:</b> {symbol}\n <b>Skor:</b> %{confidence}\n <b>Neden:</b> {reason}"
         await asyncio.to_thread(send_telegram_message, msg)
         log_event("AI_AGENT", f"{symbol} reddedildi: {reason}")
 
 # --- FRONTEND APIs ---
 
+
+MARKET_CACHE = {}
+LAST_MARKET_UPDATE = 0
+
 async def api_data(request):
     try:
+        from core.database import get_recent_signals
         rows = get_recent_signals(10)
         sigs = []
         for r in rows:
@@ -114,139 +119,162 @@ async def api_data(request):
             })
         return web.json_response({"signals": sigs})
     except Exception as e:
-        log_event("API_ERROR", f"/api/data hatasi: {e}")
         return web.json_response({"signals": []})
+
+async def fetch_market_data_bg():
+    global MARKET_CACHE, LAST_MARKET_UPDATE
+    import yfinance as yf
+    import asyncio
+    import time
+    import json
+    import os
+    
+    symbols = ["AKBNK.IS", "ALARK.IS", "ASELS.IS", "ASTOR.IS", "BIMAS.IS", "BRSAN.IS", "DOAS.IS", "EKGYO.IS", "ENKAI.IS", "EREGL.IS", "FROTO.IS", "GARAN.IS", "GUBRF.IS", "HEKTS.IS", "ISCTR.IS", "KCHOL.IS", "KONTR.IS", "KOZAL.IS", "KRDMD.IS", "ODAS.IS", "OYAKC.IS", "PETKM.IS", "PGSUS.IS", "SAHOL.IS", "SASA.IS", "SISE.IS", "TCELL.IS", "THYAO.IS", "TOASO.IS", "TUPRS.IS", "YKBNK.IS", "XU100.IS"]
+    try:
+        df = yf.download(symbols, period="2d", interval="1d", progress=False)
+        if not df.empty:
+            cache = {}
+            for sym in symbols:
+                clean_sym = sym.replace(".IS", "")
+                if clean_sym == "XU100": clean_sym = "BIST100"
+                try:
+                    close_today = float(df['Close'][sym].iloc[-1])
+                    close_yest = float(df['Close'][sym].iloc[-2])
+                    pct = ((close_today - close_yest) / close_yest) * 100
+                    cache[clean_sym] = {"price": close_today, "percent": pct, "rvol": 1.0}
+                except:
+                    cache[clean_sym] = {"price": 0.0, "percent": 0.0, "rvol": 1.0}
+            
+            # Read market regime
+            scores_file = r'C:\Users\Hasancan\Desktop\BorsaAI_Proje\Backend\data\ai_scores.json'
+            regime = "BILINMIYOR"
+            if os.path.exists(scores_file):
+                try:
+                    with open(scores_file, 'r', encoding='utf-8') as sf:
+                        sc = json.load(sf)
+                        regime = sc.get("MARKET_REGIME", "BILINMIYOR")
+                except: pass
+            if "BIST100" in cache:
+                cache["BIST100"]["regime"] = regime
+                
+            MARKET_CACHE = cache
+            LAST_MARKET_UPDATE = time.time()
+    except:
+        pass
+
+async def api_market(request):
+    import time
+    if time.time() - LAST_MARKET_UPDATE > 120:
+        import asyncio
+        asyncio.create_task(fetch_market_data_bg())
+    return web.json_response(MARKET_CACHE)
 
 async def api_performance(request):
     try:
+        from core.database import get_portfolio, get_active_trades, get_viop_trades
         port = get_portfolio()
-        if port:
-            cash, _ = port
-        else:
-            cash = 12000.0
+        cash = port[0] if port else 12000.0
             
         trades = get_active_trades()
+        viop = get_viop_trades()
+        
         positions = []
-        
         total_eq = cash
-        total_cost = 0
         
+        # LONG Positions
         for t in trades:
-            if len(t) < 6: continue
             sym = t[0]
-            bp = t[1]
-            lots = t[3]
-            cp = t[5] 
+            bp = float(t[1])
+            lots = int(t[3])
+            cp = MARKET_CACHE.get(sym, {}).get("price", bp)
+            if cp == 0: cp = bp
+            
             pnl = (cp - bp) * lots
             pnl_pct = ((cp - bp) / bp * 100) if bp > 0 else 0
-            
             total_eq += (cp * lots)
-            total_cost += (bp * lots)
             
             positions.append({
-                "symbol": sym,
-                "lot_amount": lots,
-                "buy_price": bp,
-                "current_price": cp,
-                "pnl": pnl,
-                "pnl_pct": pnl_pct
+                "symbol": sym, "type": "LONG", "lot_amount": lots,
+                "buy_price": bp, "current_price": cp, "pnl": pnl, "pnl_pct": pnl_pct
+            })
+            
+        # SHORT Positions
+        for v in viop:
+            sym = v[0]
+            sp = float(v[1])
+            lots = int(v[2])
+            cp = MARKET_CACHE.get(sym, {}).get("price", sp)
+            if cp == 0: cp = sp
+            
+            pnl = (sp - cp) * lots
+            pnl_pct = ((sp - cp) / sp * 100) if sp > 0 else 0
+            
+            total_eq += (sp * lots) + pnl
+            
+            positions.append({
+                "symbol": sym, "type": "SHORT", "lot_amount": lots,
+                "buy_price": sp, "current_price": cp, "pnl": pnl, "pnl_pct": pnl_pct
             })
             
         return web.json_response({
             "total_portfolio_value": total_eq,
             "total_cash": cash,
-            "total_pnl": total_eq - 12000,
+            "total_pnl": total_eq - 12000.0,
             "positions": positions
         })
     except Exception as e:
-        log_event("API_ERROR", f"/api/performance hatasi: {e}")
-        return web.json_response({
-            "total_portfolio_value": 12000.0,
-            "total_cash": 12000.0,
-            "total_pnl": 0.0,
-            "positions": []
-        })
-
+        return web.json_response({"error": str(e)})
 
 async def api_sell(request):
     try:
         symbol = request.query.get("symbol")
-        if not symbol:
-            return web.json_response({"status": "error", "message": "Symbol eksik"})
+        if not symbol: return web.json_response({"status": "error", "message": "Symbol eksik"})
+        
+        from core.database import get_active_trades, get_viop_trades
+        from simulator.virtual_broker import execute_virtual_sell, execute_viop_cover
         
         trades = get_active_trades()
         for t in trades:
             if t[0] == symbol:
-                bp = t[1]
-                lots = t[3]
-                from core.database import remove_trade
-                # mock current price as bp for manual quick sell, or fetch live
-                # for speed in UI, just close it at bp or last seen
-                cp = t[5] if t[5] > 0 else bp 
-                pnl = (cp - bp) * lots
-                
-                remove_trade(symbol, cp, pnl, "Manuel UI Satisi", lots)
-                
-                from core.database import get_portfolio, update_portfolio_cash
-                cash, _ = get_portfolio()
-                update_portfolio_cash(cash + (cp * lots))
-                
-                from interfaces.telegram_bot import send_telegram_message
+                cp = MARKET_CACHE.get(symbol, {}).get("price", t[1])
                 import asyncio
-                msg = f"🔴 <b>MANUEL SATIS</b> 🔴\n\n📌 Hisse: {symbol}\n💰 Satilan: {lots} Lot"
-                asyncio.create_task(asyncio.to_thread(send_telegram_message, msg))
+                asyncio.create_task(execute_virtual_sell(symbol, cp, "Arayuz Manuel Satis"))
+                return web.json_response({"status": "success", "message": f"{symbol} LONG pozisyonu kapatiliyor..."})
                 
-                return web.json_response({"status": "success", "message": f"{symbol} basariyla satildi!"})
+        viop = get_viop_trades()
+        for v in viop:
+            if v[0] == symbol:
+                cp = MARKET_CACHE.get(symbol, {}).get("price", v[1])
+                import asyncio
+                asyncio.create_task(execute_viop_cover(symbol, cp, "Arayuz Manuel Cover"))
+                return web.json_response({"status": "success", "message": f"{symbol} SHORT pozisyonu kapatiliyor..."})
                 
-        return web.json_response({"status": "error", "message": "Aktif pozisyon bulunamadi."})
+        return web.json_response({"status": "error", "message": "Acik pozisyon bulunamadi."})
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)})
-
 
 async def api_history(request):
     try:
         symbol = request.query.get("symbol")
-        if not symbol:
-            return web.json_response({"status": "error", "message": "Symbol eksik"})
-            
         import yfinance as yf
         import asyncio
         import pandas as pd
         
-        # BIST sembolleri yfinance'ta .IS uzantilidir
         ticker = f"{symbol}.IS"
-        
         def fetch_data():
             df = yf.download(ticker, period="3mo", interval="1d", progress=False)
-            if df.empty:
-                return []
-            
-            # Create a list of dicts: {time: 'YYYY-MM-DD', value: close_price}
+            if df.empty: return []
             data = []
             for date, row in df.iterrows():
-                # Handling pandas MultiIndex if it occurs
                 close_val = row["Close"].iloc[0] if isinstance(row["Close"], pd.Series) else row["Close"]
-                if pd.isna(close_val):
-                    continue
-                data.append({
-                    "time": date.strftime("%Y-%m-%d"),
-                    "value": float(close_val)
-                })
+                if pd.isna(close_val): continue
+                data.append({"time": date.strftime("%Y-%m-%d"), "value": float(close_val)})
             return data
             
         data = await asyncio.to_thread(fetch_data)
         return web.json_response({"status": "success", "data": data})
     except Exception as e:
-        log_event("API_ERROR", f"/api/history hatasi: {e}")
         return web.json_response({"status": "error", "message": str(e)})
-
-async def api_market(request):
-    return web.json_response({
-        "bist100_value": 9850.50,
-        "bist100_pct": 1.2,
-        "market_regime": "YUKSELIS (BOGA)",
-        "volatility_index": "DUSUK"
-    })
 
 async def index_handler(request):
     return web.FileResponse(os.path.join(FRONTEND_DIR, 'index.html'))

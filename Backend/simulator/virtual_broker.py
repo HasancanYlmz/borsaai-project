@@ -42,7 +42,7 @@ async def execute_virtual_buy(symbol: str, price: float, ai_reason: str, ai_conf
             for t in active_trades:
                 existing_sector = get_stock_sector(t[0])
                 if existing_sector != 'Unknown' and existing_sector == new_sector:
-                    msg = f"\u26D4 SEKTOR KOTASI REDDI \n\nHisse: {symbol}\nZaten '{existing_sector}' sektorunden hisse tasiyorsun. Riski bolmek adina alim reddedildi."
+                    msg = f" SEKTOR KOTASI REDDI \n\nHisse: {symbol}\nZaten '{existing_sector}' sektorunden hisse tasiyorsun. Riski bolmek adina alim reddedildi."
                     log_event('BROKER', msg, level='WARNING')
                     await asyncio.to_thread(send_telegram_message, msg)
                     return
@@ -100,7 +100,7 @@ async def execute_virtual_buy(symbol: str, price: float, ai_reason: str, ai_conf
             avg_str = ""
 
         msg = (
-            f'\u2705 <b>{action_title}</b>\n\n'
+            f' <b>{action_title}</b>\n\n'
             f'Hisse: {symbol}\n'
             f'Fiyat: {price:.2f} TL\n'
             f'Adet: {lot_amount} Lot\n'
@@ -140,7 +140,7 @@ async def execute_virtual_sell(symbol: str, price: float, reason: str):
                 new_cash = cash + net_revenue
                 update_portfolio_cash(new_cash)
 
-                icon = '\u2705' if net_pnl > 0 else '\u26D0'
+                icon = '' if net_pnl > 0 else '\u26D0'
                 msg = (
                     f'{icon} <b>OTOMATIK SATIS</b>\n\n'
                     f'Hisse: {symbol}\n'
@@ -217,7 +217,7 @@ async def execute_viop_short(symbol: str, price: float, ai_reason: str, ai_confi
             avg_str = ""
 
         msg = (
-            f'🔻 <b>{action_title}</b>\n\n'
+            f' <b>{action_title}</b>\n\n'
             f'Hisse: {symbol}\n'
             f'Fiyat (Satis): {price:.2f} TL\n'
             f'Adet: {lot_amount} Lot\n'
@@ -270,7 +270,7 @@ async def execute_viop_cover(symbol: str, price: float, reason: str):
                 q_pg = "INSERT INTO trade_history (symbol, buy_price, sell_price, lot_amount, pnl, reason, buy_time, sell_time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
                 _execute(q_sq, q_pg, (f"{symbol} (SHORT)", short_price, price, lots, net_pnl, reason, t[3], get_ist_time_str()))
 
-                icon = '💰' if net_pnl > 0 else '🔴'
+                icon = '' if net_pnl > 0 else ''
                 msg = (
                     f'{icon} <b>VIOP SHORT KAPATILDI (COVER)</b>\n\n'
                     f'Hisse: {symbol}\n'

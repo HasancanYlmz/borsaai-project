@@ -85,6 +85,11 @@
     </div>
 
     <!-- PİYASA VIEW -->
+    <div id="macro-header" style="background:var(--bg-card); padding:8px 15px; font-size:11px; color:var(--neon-cyan); border-bottom:1px solid var(--border); font-weight:700; display:flex; justify-content:space-between;">
+        <span>BIST100: <span id="bistVal">Yükleniyor...</span></span>
+        <span>Rejim: <span id="bistRegime">-</span></span>
+    </div>
+    
     <div id="view-piyasa" class="view-section active">
         <div class="search-bar">
             <span class="material-icons-round" style="color:var(--text-muted)">search</span>
@@ -262,6 +267,12 @@
             fetch('/api/market')
             .then(r => r.json())
             .then(d => {
+                if(d.BIST100) {
+                    const elVal = document.getElementById('bistVal');
+                    const elReg = document.getElementById('bistRegime');
+                    if(elVal) elVal.innerText = d.BIST100.price.toFixed(2) + " (" + (d.BIST100.percent>0?"+":"") + d.BIST100.percent.toFixed(2) + "%)";
+                    if(elReg) elReg.innerText = d.BIST100.regime || "BILINMIYOR";
+                }
                 let html = '';
                 for(let sym in COMPANY_NAMES) {
                     const obj = d[sym] || {price:0, percent:0, rvol:0};
@@ -270,7 +281,7 @@
                     const pctCls = isUp ? 'pct-up' : (isDown ? 'pct-down' : 'pct-flat');
                     const sign = isUp ? '+' : (isDown ? '-' : '');
                     const pctStr = sign + Math.abs(obj.percent).toFixed(2) + '%';
-                    const fire = obj.rvol >= 1.5 ? '<span class="fire-badge">🔥 Hacim</span>' : '';
+                    const fire = obj.rvol >= 1.5 ? '<span class="fire-badge">HACIM YUKSEK</span>' : '';
                     html += `<div class="stock-row" onclick="openStockModal('${sym}', '${obj.price}', '${pctStr}', ${isUp})">
                         <div class="sr-left"><div class="sr-logo" style="background:${getColor(sym)}">${sym.substring(0,2)}</div><div class="sr-info"><div class="sr-sym">${sym}${fire}</div><div class="sr-name">${COMPANY_NAMES[sym]}</div></div></div>
                         <div class="sr-right"><div class="sr-price">${obj.price > 0 ? obj.price.toFixed(2) : '-'} ₺</div><div class="sr-pct ${pctCls}">${pctStr}</div></div></div>`;
@@ -289,7 +300,9 @@
                 if(d.positions && d.positions.length > 0) {
                     d.positions.forEach(p => {
                         const isUp = p.pnl_pct > 0;
-                        ph += `<div class="pos-card"><div class="pos-top"><div class="pos-sym">${p.symbol} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color)">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
+                        
+const typeBadge = p.type === 'SHORT' ? '<span style="background:rgba(255,42,85,0.2); color:#ff2a55; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:8px;">SHORT</span>' : '<span style="background:rgba(0,255,163,0.2); color:#00ffa3; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:8px;">LONG</span>';
+ph += `<div class="pos-card"><div class="pos-top"><div class="pos-sym">${p.symbol} ${typeBadge} <span style="font-size:11px; color:var(--text-muted); font-weight:normal; margin-left:5px;">${p.lot_amount} Lot</span></div><div class="pos-pnl" style="color:var(--${isUp?'up':(p.pnl_pct<0?'down':'text-muted')}-color)">${isUp?'+':''}${fmt(p.pnl)} (${isUp?'+':''}${p.pnl_pct.toFixed(2)}%)</div></div>
                         <div class="pos-details"><div>Maliyet: <b>${fmt(p.buy_price)}</b></div><div>Anlik: <b>${fmt(p.current_price)}</b></div></div>
                         <div class="pos-actions"><button class="btn-sell" onclick="sellPosition('${p.symbol}')">Pozisyon Kapat</button></div></div>`;
                     });
