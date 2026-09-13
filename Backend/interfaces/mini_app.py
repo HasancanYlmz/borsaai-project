@@ -59,6 +59,13 @@ async def process_ai_and_buy(symbol: str, price: float):
         import asyncio
         await asyncio.to_thread(send_telegram_message, msg)
         return
+    from sensors.advanced_filters import check_rsi_cross_validation
+    rsi_ok, rsi_msg = check_rsi_cross_validation(symbol)
+    if not rsi_ok:
+        msg = f"⛔ RSI Dogrulama REDDI \n\nHisse: {symbol}\nSebep: {rsi_msg}\n\nTV Sinyali sismis/gecikmeli olabilir."
+        import asyncio
+        await asyncio.to_thread(send_telegram_message, msg)
+        return
     scores_file = r'C:\Users\Hasancan\Desktop\BorsaAI_Proje\Backend\data\ai_scores.json'
     decision = "APPROVE"
     confidence = 75.0

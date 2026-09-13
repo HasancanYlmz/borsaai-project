@@ -8,14 +8,13 @@ from core.utils import log_event
 # --------------------------------------------------------
 
 MAX_ACTIVE_TRADES = 3      # Ayni anda en fazla 3 hissede pozisyon
-MAX_ALLOCATION_PCT = 0.20  # Tek isleme kasanin yuzde 20si
+MAX_ALLOCATION_PCT = 0.20  # obsolete, artik volatility allocation var.
 
 def get_dynamic_commission(symbol: str) -> float:
     try:
         from sensors.fundamental_sensor import get_stock_fundamentals
         funds = get_stock_fundamentals(symbol)
         mcap = funds.get("market_cap", 0)
-        
         if mcap > 50_000_000_000:
             return 0.004
         elif mcap > 10_000_000_000:
@@ -28,11 +27,25 @@ def get_dynamic_commission(symbol: str) -> float:
 async def execute_virtual_buy(symbol: str, price: float, ai_reason: str, ai_confidence: float):
     try:
         active_trades = get_active_trades()
-        if len(active_trades) >= MAX_ACTIVE_TRADES:
+        existing_trade = next((t for t in active_trades if t[0] == symbol), None)
+        
+        if not existing_trade and len(active_trades) >= MAX_ACTIVE_TRADES:
             msg = f'Portfoy dolu: {symbol} alimi reddedildi! (Max {MAX_ACTIVE_TRADES} islem)'
             log_event('BROKER', msg, level='WARNING')
             await asyncio.to_thread(send_telegram_message, msg)
             return
+
+        from sensors.advanced_filters import get_stock_sector, get_volatility_allocation
+        
+        if not existing_trade:
+            new_sector = get_stock_sector(symbol)
+            for t in active_trades:
+                existing_sector = get_stock_sector(t[0])
+                if existing_sector != 'Unknown' and existing_sector == new_sector:
+                    msg = f"\u26D4 SEKTOR KOTASI REDDI \n\nHisse: {symbol}\nZaten '{existing_sector}' sektorunden hisse tasiyorsun. Riski bolmek adina alim reddedildi."
+                    log_event('BROKER', msg, level='WARNING')
+                    await asyncio.to_thread(send_telegram_message, msg)
+                    return
 
         if price <= 0:
             log_event('BROKER', f'{symbol} icin gecersiz fiyat: {price}', level='ERROR')
@@ -41,8 +54,9 @@ async def execute_virtual_buy(symbol: str, price: float, ai_reason: str, ai_conf
         cash_balance, _ = get_portfolio()
         cash = float(cash_balance)
 
-        target_allocation = 12000 * MAX_ALLOCATION_PCT
-
+        volatility_alloc = get_volatility_allocation(symbol)
+        target_allocation = 12000 * volatility_alloc
+        
         if cash < target_allocation:
             if cash > price * 10:
                 target_allocation = cash * 0.90
@@ -70,18 +84,29 @@ async def execute_virtual_buy(symbol: str, price: float, ai_reason: str, ai_conf
             total_deduction = total_cost + commission_fee
 
         new_cash = cash - total_deduction
+        update_portfolio_cash(new_cash)
 
-        save_trade(symbol, price, lot_amount)
-        update_portfolio_cash(new_casi)
+        if existing_trade:
+            old_price = float(existing_trade[1])
+            old_lots = int(existing_trade[3])
+            new_total_lots = old_lots + lot_amount
+            new_avg_price = ((old_price * old_lots) + (price * lot_amount)) / new_total_lots
+            save_trade(symbol, new_avg_price, new_total_lots)
+            action_title = "EK ALIM (MALIYET DUSURME)"
+            avg_str = f"\nEski Maliyet: {old_price:.2f} | Yeni Ort. Maliyet: {new_avg_price:.2f}"
+        else:
+            save_trade(symbol, price, lot_amount)
+            action_title = "YENI SANAL ALIM"
+            avg_str = ""
 
         msg = (
-            '?? <b>SANAL ALIM GERCEKLESTI</b>\n\n'
+            f'\u2705 <b>{action_title}</b>\n\n'
             f'Hisse: {symbol}\n'
             f'Fiyat: {price:.2f} TL\n'
             f'Adet: {lot_amount} Lot\n'
-            f'Islem Tutari: {total_cost:.2f} TL\n'
-            f'Komisyon+Kayma (%{dynamic_rate*100:.1}): {commission_fee:.2f} TL\n'
-            f'Kalan Kasa: {new_cash:.2f} TL\n\n'
+            f'Islem Tutari: {total_cost:.2f} TL (Kasanin %{volatility_alloc*100:.0f})\n'
+            f'Komisyon+Kayma (%{dynamic_rate*bool(dynamic_rate)*100:.1f}): {commission_fee:.2f} TL\n'
+            f'Kalan Kasa: {new_cash:.2f} TL{avg_str}\n\n'
             f'YZ Onay Skoru: %{ai_confidence}\n'
             f'YZ Notu: {ai_reason}'
         )
@@ -113,13 +138,13 @@ async def execute_virtual_sell(symbol: str, price: float, reason: str):
 
                 cash, _ = get_portfolio()
                 new_cash = cash + net_revenue
-                update_portfolio_cash(new_casi)
+                update_portfolio_cash(new_cash)
 
-                icon = '??' if net_pnl > 0 else '??'
+                icon = '\u2705' if net_pnl > 0 else '\u26D0'
                 msg = (
-                    f'{icon} <b>OTOMATIK SATIS</b0\n\n'
+                    f'{icon} <b>OTOMATIK SATIS</b>\n\n'
                     f'Hisse: {symbol}\n'
-                    f'Neden: {reason}\n'
+                    f'Neden: {reason}\n\n'
                     f'Satilan Lot: {lots}\n'
                     f'Alis Fiyati: {buy_price:.2f} TL\n'
                     f'Satis Fiyati: {price:.2f} TL\n\n'
