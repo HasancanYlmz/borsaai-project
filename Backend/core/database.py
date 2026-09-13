@@ -159,15 +159,3 @@ def get_daily_trades(today: str):
 
     _execute(q_sq, q_pg)
 
-def save_viop_trade(symbol: str, short_price: float, lot_amount: int):
-              ON CONFLICT (symbol) DO UPDATE SET 
-              short_price = EXCLUDED.short_price,
-              lot_amount = EXCLUDED.lot_amount,
-              short_time = EXCLUDED.short_time,
-              lowest_seen = EXCLUDED.lowest_seen"""
-    from core.utils import get_ist_time_str
-    _execute(q_sq, q_pg, (symbol, float(short_price), int(lot_amount), get_ist_time_str(), float(short_price)))
-
-
-def remove_viop_trade(symbol: str):
-
