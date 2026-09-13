@@ -318,7 +318,7 @@
             document.getElementById('mhSym').innerText = sym;
             document.getElementById('mhName').innerText = COMPANY_NAMES[sym] || '';
             document.getElementById('mhPrice').innerText = parseFloat(price).toFixed(2) + ' TL';
-            let bge = document.getElementById('mhBadge');
+            let bge = document.getElementById('mhPct');
             bge.innerText = pctStr;
             bge.className = 'badge ' + (isUp ? 'badge-up' : 'badge-down');
             
