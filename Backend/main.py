@@ -8,9 +8,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from core.database import init_db
 from core.utils import log_event
+from agents.ai_scorer import run_ai_scorer_loop
+from core.analytics import run_analytics_scheduler
 from interfaces.telegram_bot import telegram_bot_listener
 from interfaces.mini_app import start_mini_app_server
-from simulator.risk_manager import run_risk_manager
+# from simulator.risk_manager import run_risk_manager
 
 IS_RUNNING = True
 

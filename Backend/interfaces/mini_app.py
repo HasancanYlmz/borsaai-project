@@ -43,16 +43,36 @@ async def handle_tradingview_webhook(request):
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
 async def process_ai_and_buy(symbol: str, price: float):
-    ai_result = await analyze_stock_with_gemini(symbol)
-    decision = ai_result.get("decision", "REJECT")
-    confidence = ai_result.get("confidence", 0.0)
-    reason = ai_result.get("reason", "N/A")
+    scores_file = r'C:\Users\Hasancan\Desktop\BorsaAI_Proje\Backend\data\ai_scores.json'
+    decision = "APPROVE"
+    confidence = 75.0
+    reason = "Otomatik Onay (AI Skoru Bulunamadi)"
+    regime = "BULL"
     
+    if os.path.exists(scores_file):
+        try:
+            with open(scores_file, 'r', encoding='utf-8') as f:
+                scores = json.load(f)
+                regime = scores.get("MARKET_REGIME", "BULL")
+                if symbol in scores:
+                    decision = scores[symbol].get("decision", "REJECT")
+                    confidence = scores[symbol].get("confidence", 0.0)
+                    reason = scores[symbol].get("reason", "N/A")
+        except:
+            pass
+
+    from interfaces.telegram_bot import send_telegram_message
+    
+    if regime == "BEAR":
+        msg = f"⛔ <b>PİYASA FİLTRESİ REDDİ</b> ⛔\n\n🏢 <b>Hisse:</b> {symbol}\n⚠️ BIST100 düşüş trendinde (BEAR). Sistem güvenli modda olduğu için alım durduruldu."
+        await asyncio.to_thread(send_telegram_message, msg)
+        log_event("AI_AGENT", f"{symbol} reddedildi: Piyasa Rejimi BEAR")
+        return
+
     if decision == "APPROVE" and confidence >= 60.0:
         await execute_virtual_buy(symbol, price, reason, confidence)
     else:
-        from interfaces.telegram_bot import send_telegram_message
-        msg = f"❌ <b>YZ TARAFINDAN REDDEDILDI</b> ❌\n\n📌 <b>Hisse:</b> {symbol}\n🤖 <b>Skor:</b> %{confidence}\n📝 <b>Neden:</b> {reason}"
+        msg = f"🛑 <b>YZ TARAFINDAN REDDEDILDI</b> 🛑\n\n🏢 <b>Hisse:</b> {symbol}\n📊 <b>Skor:</b> %{confidence}\n📉 <b>Neden:</b> {reason}"
         await asyncio.to_thread(send_telegram_message, msg)
         log_event("AI_AGENT", f"{symbol} reddedildi: {reason}")
 

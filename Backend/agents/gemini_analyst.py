@@ -1,5 +1,7 @@
 ﻿import asyncio
 import os
+import urllib.request
+import xml.etree.ElementTree as ET
 import yfinance as yf
 from google import genai
 from core.utils import log_event
@@ -10,6 +12,25 @@ load_dotenv()
 # ---------------------------------------------------------
 # GEMINI AI ANALYST
 # ---------------------------------------------------------
+
+def fetch_turkish_news(symbol):
+    try:
+        url = f"https://news.google.com/rss/search?q={symbol}+hisse+kap&hl=tr&gl=TR&ceid=TR:tr"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            xml_data = response.read()
+        root = ET.fromstring(xml_data)
+        
+        news_items = []
+        for item in root.findall('.//item')[:3]:
+            title = item.find('title').text
+            news_items.append(f"- {title}")
+            
+        if not news_items:
+            return "Son 24 saatte onemli bir KAP haberi bulunamadi."
+        return "\n".join(news_items)
+    except Exception as e:
+        return f"Haberler cekilemedi: {e}"
 
 async def analyze_stock_with_gemini(symbol: str) -> dict:
     """
@@ -29,17 +50,19 @@ async def analyze_stock_with_gemini(symbol: str) -> dict:
         market_cap = info.get('marketCap', 'Bilinmiyor')
         last_price = info.get('lastPrice', 'Bilinmiyor')
         
+        news_text = await asyncio.to_thread(fetch_turkish_news, symbol)
+        
         prompt = f"""Sen Borsa Istanbul'da islem yapan kurumsal bir fon yoneticisisin.
-Bir algoritma, {clean_symbol} hissesi icin 'Hacim Patlamasi' sinyali uretti.
+TradingView algoritmasi, {symbol} hissesi icin 'Alim' sinyali uretti.
 
-Guncel YFinance Verileri:
-- Son Fiyat: {last_price}
-- Piyasa Degeri: {market_cap}
+Google News & KAP (Son Haberler):
+{news_text}
 
-Lutfen bu sinyali hizlica degerlendir ve bana yalnizca su formatta yanit ver:
+Lutfen bu sinyali hizlica degerlendir. Eger sirket hakkinda cok olumsuz bir haber varsa REJECT et. Eger notr veya olumluysa APPROVE et.
+Bana yalnizca su formatta yanit ver:
 KARAR: APPROVE veya REJECT
 GUVEN: 0-100 arasi bir sayi
-NEDEN: 1 cumlelik kisa aciklama
+NEDEN: 1 cumlelik kisa aciklama (Haberlere dayanarak)
 """
         
         client = genai.Client(api_key=api_key)
