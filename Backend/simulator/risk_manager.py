@@ -51,7 +51,7 @@ async def run_risk_manager():
                     
                 elif highest_seen >= buy_price * (1 + (TRAIL_TRIGGER / 100)):
                     if drawdown_from_peak <= -TRAIL_BUFFER:
-                        sell_reason = f"Izleyen Stop (Zirveden %}TRAIL_BUFFER} dusus)"
+                        sell_reason = f"Izleyen Stop (Zirveden %{TRAIL_BUFFER} dusus)"
                 
                 if sell_reason:
                     log_event("RISK_MANAGER", f"{symbol} icin koruma kalkani devrede: {sell_reason}")
