@@ -321,137 +321,35 @@ async def api_market(request):
 
 
 async def api_performance(request):
-
     try:
-
-        from core.database import get_portfolio, get_active_trades, get_viop_trades
-
+        from core.database import get_portfolio, get_active_trades
         port = get_portfolio()
-
         cash = port[0] if port else 12000.0
-
         trades = get_active_trades()
-
         positions = []
-
         total_eq = cash
-
-        # LONG Positions
-
         for t in trades:
-
             sym = t[0]
-
             bp = float(t[1])
-
             lots = int(t[3])
-
             cp = MARKET_CACHE.get(sym, {}).get("price", bp)
-
             if cp == 0: cp = bp
-
             pnl = (cp - bp) * lots
-
             pnl_pct = ((cp - bp) / bp * 100) if bp > 0 else 0
-
             total_eq += (cp * lots)
-
             positions.append({
-
                 "symbol": sym, "type": "LONG", "lot_amount": lots,
-
                 "buy_price": bp, "current_price": cp, "pnl": pnl, "pnl_pct": pnl_pct
-
             })
-
-        # SHORT Positions
-
-        for v in viop:
-
-            sym = v[0]
-
-            sp = float(v[1])
-
-            lots = int(v[2])
-
-            cp = MARKET_CACHE.get(sym, {}).get("price", sp)
-
-            if cp == 0: cp = sp
-
-            pnl = (sp - cp) * lots
-
-            pnl_pct = ((sp - cp) / sp * 100) if sp > 0 else 0
-
-            total_eq += (sp * lots) + pnl
-
-            positions.append({
-
-                "symbol": sym, "type": "SHORT", "lot_amount": lots,
-
-                "buy_price": sp, "current_price": cp, "pnl": pnl, "pnl_pct": pnl_pct
-
-            })
-
+            
         return web.json_response({
-
-            "total_portfolio_value": total_eq,
-
+            "status": "success",
             "total_cash": cash,
-
+            "total_portfolio_value": total_eq,
             "total_pnl": total_eq - 12000.0,
-
             "positions": positions
-
         })
-
     except Exception as e:
-
-        return web.json_response({"error": str(e)})
-
-
-
-async def api_sell(request):
-
-    try:
-
-        symbol = request.query.get("symbol")
-
-        if not symbol: return web.json_response({"status": "error", "message": "Symbol eksik"})
-
-        from core.database import get_active_trades, get_viop_trades
-
-        from simulator.virtual_broker import execute_virtual_sell, execute_viop_cover
-
-        trades = get_active_trades()
-
-        for t in trades:
-
-            if t[0] == symbol:
-
-                cp = MARKET_CACHE.get(symbol, {}).get("price", t[1])
-
-                import asyncio
-
-                asyncio.create_task(execute_virtual_sell(symbol, cp, "Arayuz Manuel Satis"))
-
-                return web.json_response({"status": "success", "message": f"{symbol} LONG pozisyonu kapatiliyor..."})
-
-        for v in viop:
-
-            if v[0] == symbol:
-
-                cp = MARKET_CACHE.get(symbol, {}).get("price", v[1])
-
-                import asyncio
-
-                asyncio.create_task(execute_viop_cover(symbol, cp, "Arayuz Manuel Cover"))
-
-                return web.json_response({"status": "success", "message": f"{symbol} SHORT pozisyonu kapatiliyor..."})
-
-        return web.json_response({"status": "error", "message": "Acik pozisyon bulunamadi."})
-
-    except Exception as e:
-
         return web.json_response({"status": "error", "message": str(e)})
 
 
