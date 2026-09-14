@@ -413,6 +413,25 @@ async def api_history(request):
 
 
 
+
+async def api_sell(request):
+    try:
+        symbol = request.query.get("symbol")
+        if not symbol:
+            return web.json_response({"status": "error", "message": "Sembol gerekli."})
+        from simulator.virtual_broker import execute_virtual_sell
+        from core.database import get_active_trades
+        trades = get_active_trades()
+        for t in trades:
+            if t[0] == symbol:
+                cp = MARKET_CACHE.get(symbol, {}).get("price", t[1])
+                import asyncio
+                asyncio.create_task(execute_virtual_sell(symbol, cp, "Arayuz Manuel Satis"))
+                return web.json_response({"status": "success", "message": f"{symbol} LONG pozisyonu kapatiliyor..."})
+        return web.json_response({"status": "error", "message": "Acik pozisyon bulunamadi."})
+    except Exception as e:
+        return web.json_response({"status": "error", "message": str(e)})
+
 async def index_handler(request):
 
     return web.FileResponse(os.path.join(FRONTEND_DIR, 'index.html'))
