@@ -23,8 +23,12 @@ FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 
 
 
+MARKET_CACHE = {}
+LAST_MARKET_UPDATE = 0
+
 import asyncio
 signal_queue = asyncio.Queue()
+
 
 
 def advanced_signal_filter(symbol):
