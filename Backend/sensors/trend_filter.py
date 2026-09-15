@@ -21,7 +21,7 @@ def check_higher_timeframe_trend(symbol: str) -> tuple[bool, str]:
         last_ema50 = float(ema50.iloc[-1])
         
         if last_price < last_ema50:
-            return False, f"Hisse Gunluk EMA50 (:.2f}) yin altinda! Ana trend DUSUS.".format(last_ema50)
+            return False, f"Hisse Gunluk EMA50 ({last_ema50:.2f}) 'nin altinda! Ana trend DUSUS."
             
         return True, f'Trend Onaylandi (Fiyat {last_price:.2f} > EMA50 {last_ema50:.2f})'
         
