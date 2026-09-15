@@ -244,8 +244,13 @@ async def process_signal_queue():
 
                 is_valid, reason, score = await asyncio.to_thread(advanced_signal_filter, symbol)
                 
+                # --- DINAMIK GUNLUK LIMIT (Boga Piyasasinda Esneme) ---
+                bist_info = MARKET_CACHE.get("XU100", {})
+                bist_pct = bist_info.get("change_pct", 0.0)
+                dynamic_limit = 12 if bist_pct > 1.0 else 8
+                
                 # --- GEMINI YZ HABER FILTRESI (Sadece Teknik Onay Alanlar Icin) ---
-                if is_valid and DAILY_TRADES["count"] < 8:
+                if is_valid and DAILY_TRADES["count"] < dynamic_limit:
                     from agents.gemini_analyst import analyze_stock_with_gemini
                     ai_result = await analyze_stock_with_gemini(symbol)
                     
@@ -260,9 +265,9 @@ async def process_signal_queue():
                 sig_type = "AL" if is_valid else "RED"
                 
                 # Eger limit dolduysa ama sinyal onay aldiysa, alimi iptal et
-                if is_valid and DAILY_TRADES["count"] >= 8:
+                if is_valid and DAILY_TRADES["count"] >= dynamic_limit:
                     is_valid = False
-                    reason = "GUNLUK LIMIT (8/8) DOLDU. " + reason
+                    reason = f"GUNLUK LIMIT ({dynamic_limit}/{dynamic_limit}) DOLDU. " + reason
                     sig_type = "RED"
                 
                 await asyncio.to_thread(save_signal, symbol, sig_type, "BULL", float(score), reason)
