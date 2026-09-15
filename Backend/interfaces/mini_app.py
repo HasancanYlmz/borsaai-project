@@ -165,9 +165,9 @@ async def portfolio_monitor_bg():
                 if pnl_pct >= 4.0:
                     await execute_virtual_sell(sym, cp, f"OTOMATIK KAR AL: %{pnl_pct:.2f} hedefe ulasildi")
                       
-                  # 3. Kural: Stop Loss (Zarar Kes %-3)
-                  if pnl_pct <= -3.0:
-                      await execute_virtual_sell(sym, cp, f"ZARAR KES (STOP-LOSS): %{pnl_pct:.2f}")
+                # 3. Kural: Stop Loss (Zarar Kes %-3)
+                if pnl_pct <= -3.0:
+                    await execute_virtual_sell(sym, cp, f"ZARAR KES (STOP-LOSS): %{pnl_pct:.2f}")
                     
         except Exception as e:
             print("Monitor Error:", e)
