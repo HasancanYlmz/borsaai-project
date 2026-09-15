@@ -185,10 +185,10 @@ async def process_signal_queue():
                 else:
                     # Sinyal reddedildigini telegrama bildir
                     from simulator.virtual_broker import send_telegram_message
-                    msg = f"⛔ ALIM REDDEDİLDİ
+                    msg = f"""⛔ ALIM REDDEDİLDİ
 
 Hisse: {symbol}
-Neden: {reason}"
+Neden: {reason}"""
                     await asyncio.to_thread(send_telegram_message, msg)
                     
             elif action in ["SAT", "SELL"]:
