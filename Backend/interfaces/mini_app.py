@@ -249,29 +249,22 @@ async def fetch_market_data_bg():
                 if clean_sym == "XU100": clean_sym = "BIST100"
 
                 try:
-
                     import math
-
                     close_today = float(df['Close'][sym].iloc[-1])
-
-                    close_yest = float(df['Close'][sym].iloc[-2])
-
-                    if math.isnan(close_today): close_today = 0.0
-
-                    if math.isnan(close_yest) or close_yest == 0:
-
-                        pct = 0.0
-
+                    
+                    if len(df['Close'][sym]) >= 2:
+                        close_yest = float(df['Close'][sym].iloc[-2])
                     else:
-
+                        close_yest = close_today
+                        
+                    if math.isnan(close_today): close_today = 0.0
+                    if math.isnan(close_yest) or close_yest == 0:
+                        pct = 0.0
+                    else:
                         pct = ((close_today - close_yest) / close_yest) * 100
-
                         if math.isnan(pct): pct = 0.0
-
                     cache[clean_sym] = {"price": close_today, "percent": pct, "rvol": 1.0}
-
-                except:
-
+                except Exception as e:
                     cache[clean_sym] = {"price": 0.0, "percent": 0.0, "rvol": 1.0}
 
             # Read market regime
