@@ -116,12 +116,12 @@ def advanced_signal_filter(symbol):
         # Sonuc Degerlendirmesi
         reason_str = ", ".join(details)
         if score >= 50:
-             return True, f"✅ ONAY: Puan {score}/100. [{reason_str}]"
+             return True, f"✅ ONAY: Puan {score}/100. [{reason_str}]", score
         else:
-             return False, f"❌ RED: Puan {score}/100. BARAJ GECILEMEDI. [{reason_str}]"
+             return False, f"❌ RED: Puan {score}/100. BARAJ GECILEMEDI. [{reason_str}]", score
              
     except Exception as e:
-        return True, f"ONAY: TradingView Sinyali (Puanlama Hatasi: {str(e)})"
+        return True, f"ONAY: TradingView Sinyali (Puanlama Hatasi: {str(e)})", 50.0
 
 
 async def portfolio_monitor_bg():
@@ -165,6 +165,7 @@ async def portfolio_monitor_bg():
             print("Monitor Error:", e)
 
 async def process_signal_queue():
+    import asyncio
     while True:
         try:
             data = await signal_queue.get()
@@ -178,21 +179,21 @@ async def process_signal_queue():
             from simulator.virtual_broker import execute_virtual_buy, execute_virtual_sell
             
             if action in ["AL", "BUY"]:
-                import asyncio
-                is_valid, reason = await asyncio.to_thread(advanced_signal_filter, symbol)
+                is_valid, reason, score = await asyncio.to_thread(advanced_signal_filter, symbol)
+                
+                # Radar sekmesi icin loglama
+                from core.database import save_signal
+                sig_type = "AL" if is_valid else "RED"
+                await asyncio.to_thread(save_signal, symbol, sig_type, "BULL", float(score), reason)
+                
                 if is_valid:
                     await asyncio.to_thread(execute_virtual_buy, symbol, price, reason)
                 else:
-                    # Sinyal reddedildigini telegrama bildir
                     from simulator.virtual_broker import send_telegram_message
-                    msg = f"""⛔ ALIM REDDEDİLDİ
-
-Hisse: {symbol}
-Neden: {reason}"""
+                    msg = "⛔ ALIM REDDEDİLDİ\n\nHisse: " + symbol + "\nNeden: " + reason
                     await asyncio.to_thread(send_telegram_message, msg)
                     
             elif action in ["SAT", "SELL"]:
-                import asyncio
                 await asyncio.to_thread(execute_virtual_sell, symbol, price, "TradingView Trailing Stop")
                 
             signal_queue.task_done()
@@ -200,202 +201,22 @@ Neden: {reason}"""
             print("Queue processing error:", e)
 
 async def handle_tradingview_webhook(request):
-
     try:
-
         data = await request.json()
-
-        symbol = data.get("symbol", "")
-
-        action = data.get("action", "").upper()
-
-        price = float(data.get("price", 0.0))
-
-
-
-        if not symbol or not action:
-
-            return jsonify({"status": "error", "message": "Gecersiz Payload"}), 400
-
-
-
-        if action in ["AL", "BUY"]:
-
-            log_event("WEBHOOK", f"{symbol} icin AL sinyali alindi, YZ analizine gonderiliyor.")
-
-            asyncio.create_task(process_ai_and_buy(symbol, price))
-
-            return jsonify({"status": "received", "action": "buy_process_started"}), 200
-
-
-
-        elif action in ["SAT", "SELL"]:
-
-            log_event("WEBHOOK", f"{symbol} icin SAT sinyali alindi, satis basliyor.")
-
-            from simulator.virtual_broker import execute_virtual_sell
-
-            asyncio.create_task(execute_virtual_sell(symbol, price, "TradingView Sinyali (SAT)"))
-
-            return jsonify({"status": "received", "action": "sell_executed"}), 200
-
-
-
-
-
-        return jsonify({"status": "ignored", "message": "Bilinmeyen Aksiyon"}), 200
-
-
-
+        secret = data.get("secret", "")
+        if secret != "BorsaAI_Gizli_Anahtar_2026":
+            from aiohttp import web
+            return web.json_response({"status": "error", "message": "Yetkisiz islem."}, status=403)
+            
+        await signal_queue.put(data)
+        from aiohttp import web
+        return web.json_response({"status": "success", "message": "Sinyal kuyruga alindi."})
     except Exception as e:
-
-        log_event("WEBHOOK_ERROR", f"Hata: {e}", level="ERROR")
-
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-
-async def process_ai_and_buy(symbol: str, price: float):
-
-    from sensors.trend_filter import check_higher_timeframe_trend
-
-    from interfaces.telegram_bot import send_telegram_message
-
-    trend_ok, trend_msg = check_higher_timeframe_trend(symbol)
-
-    if not trend_ok:
-
-        msg = f"Trend Filtresi REDDI \n\nHisse: {symbol}\nSebep: {trend_msg}\n\nBoga tuzagi riski nedeniyle AL sinyali iptal edildi."
-
-        import asyncio
-
-        await asyncio.to_thread(send_telegram_message, msg)
-
-        return
-
-    from sensors.advanced_filters import check_rsi_cross_validation
-
-    rsi_ok, rsi_msg = check_rsi_cross_validation(symbol)
-
-    if not rsi_ok:
-
-        msg = f" RSI Dogrulama REDDI \n\nHisse: {symbol}\nSebep: {rsi_msg}\n\nTV Sinyali sismis/gecikmeli olabilir."
-
-        import asyncio
-
-        await asyncio.to_thread(send_telegram_message, msg)
-
-        return
-
-    scores_file = r'C:\Users\Hasancan\Desktop\BorsaAI_Proje\Backend\data\ai_scores.json'
-
-    decision = "APPROVE"
-
-    confidence = 75.0
-
-    reason = "Otomatik Onay (AI Skoru Bulunamadi)"
-
-    regime = "BULL"
-
-    if os.path.exists(scores_file):
-
-        try:
-
-            with open(scores_file, 'r', encoding='utf-8') as f:
-
-                scores = json.load(f)
-
-                regime = scores.get("MARKET_REGIME", "BULL")
-
-                if symbol in scores:
-
-                    decision = scores[symbol].get("decision", "REJECT")
-
-                    confidence = scores[symbol].get("confidence", 0.0)
-
-                    reason = scores[symbol].get("reason", "N/A")
-
-        except:
-
-            pass
-
-
-
-    from interfaces.telegram_bot import send_telegram_message
-
-    if regime == "BEAR":
-
-        msg = f" <b>PİYASA FİLTRESİ REDDİ</b> \n\n <b>Hisse:</b> {symbol}\n️ BIST100 düşüş trendinde (BEAR). Sistem güvenli modda olduğu için alım durduruldu."
-
-        await asyncio.to_thread(send_telegram_message, msg)
-
-        log_event("AI_AGENT", f"{symbol} reddedildi: Piyasa Rejimi BEAR")
-
-        return
-
-
-
-    if decision == "APPROVE" and confidence >= 60.0:
-
-        await execute_virtual_buy(symbol, price, reason, confidence)
-
-    else:
-
-        msg = f" <b>YZ TARAFINDAN REDDEDILDI</b> \n\n <b>Hisse:</b> {symbol}\n <b>Skor:</b> %{confidence}\n <b>Neden:</b> {reason}"
-
-        await asyncio.to_thread(send_telegram_message, msg)
-
-        log_event("AI_AGENT", f"{symbol} reddedildi: {reason}")
-
-
-
-# --- FRONTEND APIs ---
-
-
-
-
-
-MARKET_CACHE = {}
-
-LAST_MARKET_UPDATE = 0
-
-
-
-async def api_data(request):
-
-    try:
-
-        from core.database import get_recent_signals
-
-        rows = get_recent_signals(10)
-
-        sigs = []
-
-        for r in rows:
-
-            sigs.append({
-
-                "timestamp": r[0],
-
-                "symbol": r[1],
-
-                "type": r[2],
-
-                "reason": r[5],
-
-                "confidence": r[4]
-
-            })
-
-        return web.json_response({"signals": sigs})
-
-    except Exception as e:
-
-        return web.json_response({"signals": []})
-
-
+        from aiohttp import web
+        return web.json_response({"status": "error", "message": str(e)}, status=400)
 
 async def fetch_market_data_bg():
+
 
     global MARKET_CACHE, LAST_MARKET_UPDATE
 
