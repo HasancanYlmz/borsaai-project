@@ -22,6 +22,183 @@ FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 
 
 
+
+import asyncio
+signal_queue = asyncio.Queue()
+
+
+def advanced_signal_filter(symbol):
+    try:
+        import yfinance as yf
+        import pandas as pd
+        import math
+        
+        # BIST100 (Genel Piyasa) Verisi
+        bist = yf.download("XU100.IS", period="5d", interval="1d", progress=False)
+        bist_pct = 0.0
+        if len(bist) >= 2:
+            bist_close = float(bist['Close'].iloc[-1].iloc[0] if isinstance(bist['Close'].iloc[-1], pd.Series) else bist['Close'].iloc[-1])
+            bist_prev = float(bist['Close'].iloc[-2].iloc[0] if isinstance(bist['Close'].iloc[-2], pd.Series) else bist['Close'].iloc[-2])
+            bist_pct = ((bist_close - bist_prev) / bist_prev) * 100
+            
+        # Hisse Ozelinde Teknik Veriler
+        df = yf.download(f"{symbol}.IS", period="1mo", interval="1d", progress=False)
+        if len(df) < 15:
+            return True, "Onay: Veri yetersiz ama TV sinyali gecerli (Puan hesabi yapilamadi)"
+            
+        closes = df['Close'][f"{symbol}.IS"] if isinstance(df['Close'], pd.DataFrame) else df['Close']
+        volumes = df['Volume'][f"{symbol}.IS"] if isinstance(df['Volume'], pd.DataFrame) else df['Volume']
+        closes = closes.dropna()
+        volumes = volumes.dropna()
+        
+        current_price = float(closes.iloc[-1])
+        prev_price = float(closes.iloc[-2]) if len(closes) >=2 else current_price
+        stock_pct = ((current_price - prev_price) / prev_price) * 100 if prev_price > 0 else 0.0
+        
+        current_vol = float(volumes.iloc[-1])
+        avg_vol = float(volumes.rolling(window=10).mean().iloc[-2]) if len(volumes) >= 10 else current_vol
+        rvol = current_vol / avg_vol if avg_vol > 0 else 1.0
+        
+        # RSI Hesaplama (14 gunluk)
+        delta = closes.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = float(rsi.iloc[-1])
+        
+        # SMA20 Hesaplama
+        sma20 = float(closes.rolling(window=20).mean().iloc[-1])
+        
+        # ----------------------------------------------------
+        # PUANLAMA ALGORITMASI (Max 100 Puan - Baraj 50 Puan)
+        # ----------------------------------------------------
+        score = 0
+        details = []
+        
+        # 1. Endeks Puani (Max 20)
+        if bist_pct > 0:
+            score += 20
+            details.append("Endeks Pozitif (+20)")
+        elif bist_pct >= -0.5:
+            score += 10
+            details.append("Endeks Notr (+10)")
+        else:
+            details.append("Endeks Negatif (+0)")
+            
+        # 2. RSI Puani (Max 30)
+        if 40 <= current_rsi <= 60:
+            score += 30
+            details.append(f"RSI Ideal {current_rsi:.0f} (+30)")
+        elif 60 < current_rsi <= 70:
+            score += 20
+            details.append(f"RSI Sicak {current_rsi:.0f} (+20)")
+        elif 70 < current_rsi <= 80:
+            score += 5
+            details.append(f"RSI Sismis {current_rsi:.0f} (+5)")
+        else:
+            details.append(f"RSI Tehlikeli {current_rsi:.0f} (+0)")
+            
+        # 3. Trend Puani (Max 25)
+        if current_price > sma20:
+            score += 25
+            details.append("Fiyat>SMA20 (+25)")
+        else:
+            details.append("Fiyat<SMA20 (+0)")
+            
+        # 4. Hacim Puani (Max 25)
+        if rvol > 1.5:
+            score += 25
+            details.append(f"Hacim Patlamasi {rvol:.1f}x (+25)")
+        else:
+            details.append(f"Hacim Zayif {rvol:.1f}x (+0)")
+            
+        # Sonuc Degerlendirmesi
+        reason_str = ", ".join(details)
+        if score >= 50:
+             return True, f"✅ ONAY: Puan {score}/100. [{reason_str}]"
+        else:
+             return False, f"❌ RED: Puan {score}/100. BARAJ GECILEMEDI. [{reason_str}]"
+             
+    except Exception as e:
+        return True, f"ONAY: TradingView Sinyali (Puanlama Hatasi: {str(e)})"
+
+
+async def portfolio_monitor_bg():
+    import asyncio
+    from simulator.virtual_broker import execute_virtual_sell
+    from core.database import get_active_trades
+    
+    while True:
+        try:
+            await asyncio.sleep(60) # Her 60 saniyede bir kontrol et
+            
+            # BIST100 Cokus Kontrolu (Acil Cikis)
+            bist_data = MARKET_CACHE.get("BIST100", {})
+            bist_pct = bist_data.get("percent", 0.0)
+            
+            is_panic = bist_pct < -2.0
+            
+            trades = get_active_trades()
+            if not trades:
+                continue
+                
+            for t in trades:
+                sym = t[0]
+                bp = float(t[1])
+                cp = MARKET_CACHE.get(sym, {}).get("price", bp)
+                
+                if cp == 0 or bp == 0: continue
+                
+                pnl_pct = ((cp - bp) / bp) * 100
+                
+                # 1. Kural: Piyasa Cokusu (Panic Sell)
+                if is_panic:
+                    await asyncio.to_thread(execute_virtual_sell, sym, cp, f"ACIL CIKIS: BIST100 cokusu ({bist_pct:.2f}%)")
+                    continue
+                    
+                # 2. Kural: Otomatik Kar Al (Hedef %4)
+                if pnl_pct >= 4.0:
+                    await asyncio.to_thread(execute_virtual_sell, sym, cp, f"OTOMATIK KAR AL: %{pnl_pct:.2f} hedefe ulasildi")
+                    
+        except Exception as e:
+            print("Monitor Error:", e)
+
+async def process_signal_queue():
+    while True:
+        try:
+            data = await signal_queue.get()
+            action = data.get("action", "").upper()
+            symbol = data.get("symbol", "")
+            price = data.get("price", 0.0)
+            
+            try: price = float(price)
+            except: price = 0.0
+            
+            from simulator.virtual_broker import execute_virtual_buy, execute_virtual_sell
+            
+            if action in ["AL", "BUY"]:
+                import asyncio
+                is_valid, reason = await asyncio.to_thread(advanced_signal_filter, symbol)
+                if is_valid:
+                    await asyncio.to_thread(execute_virtual_buy, symbol, price, reason)
+                else:
+                    # Sinyal reddedildigini telegrama bildir
+                    from simulator.virtual_broker import send_telegram_message
+                    msg = f"⛔ ALIM REDDEDİLDİ
+
+Hisse: {symbol}
+Neden: {reason}"
+                    await asyncio.to_thread(send_telegram_message, msg)
+                    
+            elif action in ["SAT", "SELL"]:
+                import asyncio
+                await asyncio.to_thread(execute_virtual_sell, symbol, price, "TradingView Trailing Stop")
+                
+            signal_queue.task_done()
+        except Exception as e:
+            print("Queue processing error:", e)
+
 async def handle_tradingview_webhook(request):
 
     try:
@@ -456,13 +633,11 @@ async def start_mini_app_server():
     port = int(os.environ.get("PORT", 8080))
 
     runner = web.AppRunner(app)
-
     await runner.setup()
-
     site = web.TCPSite(runner, '0.0.0.0', port)
-
     await site.start()
-
+    asyncio.create_task(process_signal_queue())
+    asyncio.create_task(portfolio_monitor_bg())
     log_event("MINI_APP", f"Telegram Mini App sunucusu {port} portunda basladi.")
 
     while True:
