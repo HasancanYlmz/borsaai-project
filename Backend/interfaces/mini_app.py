@@ -27,7 +27,11 @@ MARKET_CACHE = {}
 LAST_MARKET_UPDATE = 0
 
 import asyncio
+import time
 signal_queue = asyncio.Queue()
+COOLDOWN_CACHE = {}
+DAILY_TRADES = {"date": "", "count": 0}
+MAX_PNL_CACHE = {}
 
 
 
@@ -117,12 +121,27 @@ def advanced_signal_filter(symbol):
         else:
             details.append(f"Hacim Zayif {rvol:.1f}x (+0)")
             
+        # 5. Goreceli Guc Bonusu (Akilli Filtre - Max 12 Puan)
+        if stock_pct > 0:
+            if bist_pct < -2.0:
+                if (stock_pct - bist_pct) >= 2.0 and rvol > 1.5 and current_rsi < 60:
+                    score += 12
+                    details.append("Guc (+12) Cokuste Lider")
+            elif bist_pct > 0:
+                if (stock_pct - bist_pct) >= 2.0 and rvol > 1.5 and current_rsi < 60:
+                    score += 12
+                    details.append("Guc (+12) Yukseliste Lider")
+            else:
+                if rvol > 1.5 and current_rsi < 60:
+                    score += 6
+                    details.append("Guc (+6) Hacimli Kirilim")
+            
         # Sonuc Degerlendirmesi
         reason_str = ", ".join(details)
         if score >= 50:
-             return True, f"✅ ONAY: Puan {score}/100. [{reason_str}]", score
+             return True, f"✅ ONAY: Puan {score}/112. [{reason_str}]", score
         else:
-             return False, f"❌ RED: Puan {score}/100. BARAJ GECILEMEDI. [{reason_str}]", score
+             return False, f"❌ RED: Puan {score}/112. BARAJ GECILEMEDI. [{reason_str}]", score
              
     except Exception as e:
         return True, f"ONAY: TradingView Sinyali (Puanlama Hatasi: {str(e)})", 50.0
@@ -161,13 +180,29 @@ async def portfolio_monitor_bg():
                     await execute_virtual_sell(sym, cp, f"ACIL CIKIS: BIST100 cokusu ({bist_pct:.2f}%)")
                     continue
                     
-                # 2. Kural: Otomatik Kar Al (Hedef %4)
-                if pnl_pct >= 4.0:
-                    await execute_virtual_sell(sym, cp, f"OTOMATIK KAR AL: %{pnl_pct:.2f} hedefe ulasildi")
-                      
-                # 3. Kural: Stop Loss (Zarar Kes %-3)
-                if pnl_pct <= -3.0:
+                # Max PnL takibi (Trailing Stop icin)
+                current_max = MAX_PNL_CACHE.get(sym, -100.0)
+                if pnl_pct > current_max:
+                    MAX_PNL_CACHE[sym] = pnl_pct
+                    current_max = pnl_pct
+
+                # 2. Kural: Trailing Stop Loss & Kar Al
+                if current_max >= 4.0 and pnl_pct <= current_max - 1.0:
+                    # Zirveden %1 geri cekilmis -> SAT (Min %3 kar)
+                    await execute_virtual_sell(sym, cp, f"TRAILING STOP: Zirveden dondu. Kar: %{pnl_pct:.2f}")
+                    MAX_PNL_CACHE.pop(sym, None)
+                elif current_max >= 3.0 and pnl_pct <= 1.0:
+                    # %3'u gormus, %1'e dusmus -> SAT
+                    await execute_virtual_sell(sym, cp, f"TRAILING STOP: %3'ten %1'e dondu. Kar: %{pnl_pct:.2f}")
+                    MAX_PNL_CACHE.pop(sym, None)
+                elif current_max >= 2.0 and pnl_pct <= 0.0:
+                    # %2'yi gormus, basa basa dusmus -> SAT
+                    await execute_virtual_sell(sym, cp, f"TRAILING STOP: Basa Bas Cikis. Karsiz Islem.")
+                    MAX_PNL_CACHE.pop(sym, None)
+                elif pnl_pct <= -3.0:
+                    # Sabit Zarar Kes
                     await execute_virtual_sell(sym, cp, f"ZARAR KES (STOP-LOSS): %{pnl_pct:.2f}")
+                    MAX_PNL_CACHE.pop(sym, None)
                     
         except Exception as e:
             print("Monitor Error:", e)
@@ -187,14 +222,53 @@ async def process_signal_queue():
             from simulator.virtual_broker import execute_virtual_buy, execute_virtual_sell
             
             if action in ["AL", "BUY"]:
+                # --- Gun Sonu ve Seans Filtresi ---
+                now = time.localtime()
+                if now.tm_hour >= 17 and now.tm_min >= 30:
+                    # Saat 17:30 sonrasi sinyalleri yoksay
+                    signal_queue.task_done()
+                    continue
+                
+                # --- Gunluk Limit Kontrolu ---
+                today_str = time.strftime("%Y-%m-%d", now)
+                if DAILY_TRADES["date"] != today_str:
+                    DAILY_TRADES["date"] = today_str
+                    DAILY_TRADES["count"] = 0
+                
+                # --- Cooldown (30 Dk) Kontrolu ---
+                last_time = COOLDOWN_CACHE.get(symbol, 0)
+                if time.time() - last_time < 1800:
+                    signal_queue.task_done()
+                    continue # 30 dk gecmeden ayni hisseyi isleme alma
+                COOLDOWN_CACHE[symbol] = time.time()
+
                 is_valid, reason, score = await asyncio.to_thread(advanced_signal_filter, symbol)
+                
+                # --- GEMINI YZ HABER FILTRESI (Sadece Teknik Onay Alanlar Icin) ---
+                if is_valid and DAILY_TRADES["count"] < 8:
+                    from agents.gemini_analyst import analyze_stock_with_gemini
+                    ai_result = await analyze_stock_with_gemini(symbol)
+                    
+                    if ai_result["decision"] == "REJECT":
+                        is_valid = False
+                        reason = f"GEMINI HABER VETOSU: {ai_result['reason']} (Teknik Puan: {score})"
+                    else:
+                        reason = f"{reason} | Gemini Haber Onayi: {ai_result['reason']}"
                 
                 # Radar sekmesi icin loglama
                 from core.database import save_signal
                 sig_type = "AL" if is_valid else "RED"
+                
+                # Eger limit dolduysa ama sinyal onay aldiysa, alimi iptal et
+                if is_valid and DAILY_TRADES["count"] >= 8:
+                    is_valid = False
+                    reason = "GUNLUK LIMIT (8/8) DOLDU. " + reason
+                    sig_type = "RED"
+                
                 await asyncio.to_thread(save_signal, symbol, sig_type, "BULL", float(score), reason)
                 
                 if is_valid:
+                    DAILY_TRADES["count"] += 1
                     await execute_virtual_buy(symbol, price, reason, float(score))
                 else:
                     from simulator.virtual_broker import send_telegram_message
@@ -457,6 +531,55 @@ async def index_handler(request):
 
 
 
+async def daily_summary_reporter_bg():
+    import asyncio
+    import time
+    from interfaces.telegram_bot import send_telegram_message
+    from core.database import get_portfolio, get_active_trades
+    
+    last_report_date = ""
+    while True:
+        try:
+            now = time.localtime()
+            today_str = time.strftime("%Y-%m-%d", now)
+            
+            # Saat 18:15'i gecmisse ve bugun rapor atilmadiysa
+            if now.tm_hour == 18 and now.tm_min >= 15 and last_report_date != today_str:
+                cash, _ = get_portfolio()
+                trades = get_active_trades()
+                
+                total_equity = float(cash)
+                active_count = len(trades)
+                
+                # Toplam portfoy degeri hesabi
+                for t in trades:
+                    sym = t[0]
+                    bp = float(t[1])
+                    lots = int(t[3])
+                    cp = MARKET_CACHE.get(sym, {}).get("price", bp)
+                    if cp == 0: cp = bp
+                    total_equity += (cp * lots)
+                
+                daily_profit = total_equity - 12000.0  # Baslangic sermayesine gore
+                profit_pct = (daily_profit / 12000.0) * 100
+                
+                msg = (
+                    "📊 <b>BorsaAI Gün Sonu Raporu</b>\n"
+                    f"Tarih: {today_str}\n\n"
+                    f"Açık Pozisyon Sayısı: {active_count}\n"
+                    f"Kasa Nakit: {cash:.2f} TL\n"
+                    f"Toplam Varlık: {total_equity:.2f} TL\n\n"
+                    f"💰 Kümülatif K/Z: {daily_profit:.2f} TL (%{profit_pct:.2f})"
+                )
+                
+                await asyncio.to_thread(send_telegram_message, msg)
+                last_report_date = today_str
+                
+            await asyncio.sleep(60) # Her dakika kontrol et
+        except Exception as e:
+            print("Daily Report Error:", e)
+            await asyncio.sleep(60)
+
 async def start_mini_app_server():
 
     app = web.Application()
@@ -487,6 +610,7 @@ async def start_mini_app_server():
     await site.start()
     asyncio.create_task(process_signal_queue())
     asyncio.create_task(portfolio_monitor_bg())
+    asyncio.create_task(daily_summary_reporter_bg())
     log_event("MINI_APP", f"Telegram Mini App sunucusu {port} portunda basladi.")
 
     while True:
