@@ -46,7 +46,7 @@ def advanced_signal_filter(symbol):
             bist_pct = ((bist_close - bist_prev) / bist_prev) * 100
             
         # Hisse Ozelinde Teknik Veriler
-        df = yf.download(f"{symbol}.IS", period="1mo", interval="1d", progress=False)
+        df = yf.download(f"{symbol}.IS", period="3mo", interval="1d", progress=False)
         if len(df) < 15:
             return True, "Onay: Veri yetersiz ama TV sinyali gecerli (Puan hesabi yapilamadi)"
             
@@ -158,12 +158,16 @@ async def portfolio_monitor_bg():
                 
                 # 1. Kural: Piyasa Cokusu (Panic Sell)
                 if is_panic:
-                    await asyncio.to_thread(execute_virtual_sell, sym, cp, f"ACIL CIKIS: BIST100 cokusu ({bist_pct:.2f}%)")
+                    await execute_virtual_sell(sym, cp, f"ACIL CIKIS: BIST100 cokusu ({bist_pct:.2f}%)")
                     continue
                     
                 # 2. Kural: Otomatik Kar Al (Hedef %4)
                 if pnl_pct >= 4.0:
-                    await asyncio.to_thread(execute_virtual_sell, sym, cp, f"OTOMATIK KAR AL: %{pnl_pct:.2f} hedefe ulasildi")
+                    await execute_virtual_sell(sym, cp, f"OTOMATIK KAR AL: %{pnl_pct:.2f} hedefe ulasildi")
+                      
+                  # 3. Kural: Stop Loss (Zarar Kes %-3)
+                  if pnl_pct <= -3.0:
+                      await execute_virtual_sell(sym, cp, f"ZARAR KES (STOP-LOSS): %{pnl_pct:.2f}")
                     
         except Exception as e:
             print("Monitor Error:", e)
@@ -191,14 +195,14 @@ async def process_signal_queue():
                 await asyncio.to_thread(save_signal, symbol, sig_type, "BULL", float(score), reason)
                 
                 if is_valid:
-                    await asyncio.to_thread(execute_virtual_buy, symbol, price, reason)
+                    await execute_virtual_buy(symbol, price, reason, float(score))
                 else:
                     from simulator.virtual_broker import send_telegram_message
                     msg = "⛔ ALIM REDDEDİLDİ\n\nHisse: " + symbol + "\nNeden: " + reason
                     await asyncio.to_thread(send_telegram_message, msg)
                     
             elif action in ["SAT", "SELL"]:
-                await asyncio.to_thread(execute_virtual_sell, symbol, price, "TradingView Trailing Stop")
+                await execute_virtual_sell(symbol, price, "TradingView Trailing Stop")
                 
             signal_queue.task_done()
         except Exception as e:
