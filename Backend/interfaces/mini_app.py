@@ -156,6 +156,19 @@ async def portfolio_monitor_bg():
         try:
             await asyncio.sleep(60) # Her 60 saniyede bir kontrol et
             
+            # --- CUMA SENDROMU (Hafta Sonu Gap Korumasi) ---
+            now = __import__('time').localtime()
+            if now.tm_wday == 4 and now.tm_hour == 17 and now.tm_min >= 40:
+                trades_to_close = get_active_trades()
+                if trades_to_close:
+                    for t in trades_to_close:
+                        sym = t[0]
+                        bp = float(t[1])
+                        cp = MARKET_CACHE.get(sym, {}).get("price", bp)
+                        if cp == 0: cp = bp
+                        await execute_virtual_sell(sym, cp, "HAFTA SONU RISK KORUMASI (Cuma Nakde Gecis)")
+                    continue
+            
             # BIST100 Cokus Kontrolu (Acil Cikis)
             bist_data = MARKET_CACHE.get("BIST100", {})
             bist_pct = bist_data.get("percent", 0.0)
@@ -249,8 +262,14 @@ async def process_signal_queue():
                 bist_pct = bist_info.get("change_pct", 0.0)
                 dynamic_limit = 12 if bist_pct > 1.0 else 8
                 
+                # --- ENDEKS COKUS SIGORTASI (Kirmizi Alarm) ---
+                if bist_pct <= -3.5:
+                    is_valid = False
+                    reason = f"🔴 KIRMIZI ALARM (Cokus Sigortasi): BIST100 %{bist_pct:.2f} seviyesinde. Kasa guvenligi icin alimlar donduruldu!"
+                    score = 0.0
+                
                 # --- GEMINI YZ HABER FILTRESI (Sadece Teknik Onay Alanlar Icin) ---
-                if is_valid and DAILY_TRADES["count"] < dynamic_limit:
+                elif is_valid and DAILY_TRADES["count"] < dynamic_limit:
                     from agents.gemini_analyst import analyze_stock_with_gemini
                     ai_result = await analyze_stock_with_gemini(symbol)
                     
@@ -541,6 +560,7 @@ async def daily_summary_reporter_bg():
     import time
     from interfaces.telegram_bot import send_telegram_message
     from core.database import get_portfolio, get_active_trades
+    from simulator.virtual_broker import execute_virtual_sell
     
     last_report_date = ""
     while True:
