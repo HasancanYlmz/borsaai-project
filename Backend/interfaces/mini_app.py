@@ -236,7 +236,7 @@ async def fetch_market_data_bg():
 
     try:
 
-        df = yf.download(symbols, period="2d", interval="1d", progress=False)
+        df = yf.download(symbols, period="5d", interval="1d", progress=False)
 
         if not df.empty:
 
