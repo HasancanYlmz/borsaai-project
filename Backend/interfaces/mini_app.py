@@ -297,6 +297,26 @@ async def fetch_market_data_bg():
 
 
 
+
+async def api_data(request):
+    try:
+        from core.database import get_recent_signals
+        rows = get_recent_signals(10)
+        sigs = []
+        for r in rows:
+            sigs.append({
+                "timestamp": r[0],
+                "symbol": r[1],
+                "type": r[2],
+                "confidence": r[4],
+                "reason": r[5]
+            })
+        from aiohttp import web
+        return web.json_response({"status": "success", "data": sigs})
+    except Exception as e:
+        from aiohttp import web
+        return web.json_response({"status": "error", "message": str(e)})
+
 async def api_market(request):
 
     import time
