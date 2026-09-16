@@ -41,7 +41,7 @@ def run_post_mortem():
             
         client = genai.Client(api_key=api_key)
         interaction = client.interactions.create(
-            model='gemini-3.7-flash',
+            model='gemini-3.5-flash-lite',
             input=prompt,
             store=False
         )

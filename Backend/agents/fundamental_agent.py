@@ -44,7 +44,7 @@ def analyze_news_with_ai(symbol: str, news_list: List[str]) -> Dict:
         """
         
         interaction = client.interactions.create(
-            model='gemini-3.7-flash',
+            model='gemini-3.5-flash-lite',
             input=prompt,
             store=False
         )

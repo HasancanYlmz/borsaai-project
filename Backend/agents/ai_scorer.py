@@ -105,7 +105,7 @@ def score_stock_with_gemini(symbol, client):
 
     try:
         interaction = client.interactions.create(
-            model='gemini-3.7-flash',
+            model='gemini-3.5-flash-lite',
             input=prompt,
             store=False
         )

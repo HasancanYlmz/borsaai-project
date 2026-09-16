@@ -69,7 +69,7 @@ NEDEN: 1 cumlelik kisa aciklama (Haberlere dayanarak)
         
         def call_ai():
             interaction = client.interactions.create(
-                model='gemini-3.7-flash',
+                model='gemini-3.5-flash-lite',
                 input=prompt,
                 store=False
             )
