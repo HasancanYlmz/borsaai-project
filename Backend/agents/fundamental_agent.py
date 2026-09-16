@@ -43,12 +43,13 @@ def analyze_news_with_ai(symbol: str, news_list: List[str]) -> Dict:
         {{"sentiment": "POZİTİF" veya "NEGATİF" veya "NÖTR", "score": (0 ile 100 arası tamsayı, 50 nötrdür), "summary": "Kısa 1-2 cümlelik Türkçe haber özeti"}}
         """
         
-        response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=prompt,
+        interaction = client.interactions.create(
+            model='gemini-3.7-flash',
+            input=prompt,
+            store=False
         )
         
-        text = response.text.strip()
+        text = interaction.output_text.strip()
         # Temizleme (Eğer model inat edip markdown basarsa)
         if text.startswith('```json'): text = text[7:]
         if text.startswith('```'): text = text[3:]

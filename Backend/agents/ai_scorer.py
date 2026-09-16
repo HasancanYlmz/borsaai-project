@@ -104,14 +104,15 @@ def score_stock_with_gemini(symbol, client):
     )
 
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
+        interaction = client.interactions.create(
+            model='gemini-3.7-flash',
+            input=prompt,
+            store=False
         )
         decision = "APPROVE"
         confidence = 50.0
         reason = "Analiz yapildi."
-        for line in response.text.split('\n'):
+        for line in interaction.output_text.split('\n'):
             l = line.strip().upper()
             if l.startswith("KARAR:"):
                 decision = l.replace("KARAR:", "").strip()

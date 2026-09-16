@@ -40,12 +40,13 @@ def run_post_mortem():
             return
             
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=prompt,
+        interaction = client.interactions.create(
+            model='gemini-3.7-flash',
+            input=prompt,
+            store=False
         )
         
-        analysis = response.text
+        analysis = interaction.output_text
         
         # Sonucu JSON olarak kaydet
         lessons_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lessons_learned.json')

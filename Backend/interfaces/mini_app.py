@@ -169,12 +169,6 @@ async def portfolio_monitor_bg():
                         await execute_virtual_sell(sym, cp, "HAFTA SONU RISK KORUMASI (Cuma Nakde Gecis)")
                     continue
             
-            # BIST100 Cokus Kontrolu (Acil Cikis)
-            bist_data = MARKET_CACHE.get("BIST100", {})
-            bist_pct = bist_data.get("percent", 0.0)
-            
-            is_panic = bist_pct < -2.0
-            
             trades = get_active_trades()
             if not trades:
                 continue
@@ -188,11 +182,6 @@ async def portfolio_monitor_bg():
                 
                 pnl_pct = ((cp - bp) / bp) * 100
                 
-                # 1. Kural: Piyasa Cokusu (Panic Sell)
-                if is_panic:
-                    await execute_virtual_sell(sym, cp, f"ACIL CIKIS: BIST100 cokusu ({bist_pct:.2f}%)")
-                    continue
-                    
                 # Max PnL takibi (Trailing Stop icin)
                 current_max = MAX_PNL_CACHE.get(sym, -100.0)
                 if pnl_pct > current_max:
@@ -262,14 +251,8 @@ async def process_signal_queue():
                 bist_pct = bist_info.get("change_pct", 0.0)
                 dynamic_limit = 12 if bist_pct > 1.0 else 8
                 
-                # --- ENDEKS COKUS SIGORTASI (Kirmizi Alarm) ---
-                if bist_pct <= -3.5:
-                    is_valid = False
-                    reason = f"🔴 KIRMIZI ALARM (Cokus Sigortasi): BIST100 %{bist_pct:.2f} seviyesinde. Kasa guvenligi icin alimlar donduruldu!"
-                    score = 0.0
-                
                 # --- GEMINI YZ HABER FILTRESI (Sadece Teknik Onay Alanlar Icin) ---
-                elif is_valid and DAILY_TRADES["count"] < dynamic_limit:
+                if is_valid and DAILY_TRADES["count"] < dynamic_limit:
                     from agents.gemini_analyst import analyze_stock_with_gemini
                     ai_result = await analyze_stock_with_gemini(symbol)
                     

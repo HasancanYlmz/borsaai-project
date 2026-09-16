@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import os
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -68,11 +68,12 @@ NEDEN: 1 cumlelik kisa aciklama (Haberlere dayanarak)
         client = genai.Client(api_key=api_key)
         
         def call_ai():
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt,
+            interaction = client.interactions.create(
+                model='gemini-3.7-flash',
+                input=prompt,
+                store=False
             )
-            return response.text
+            return interaction.output_text
 
         ai_response = await asyncio.to_thread(call_ai)
         
