@@ -338,38 +338,35 @@ async def fetch_market_data_bg():
 
     symbols = ["AEFES.IS", "AGHOL.IS", "AHGAZ.IS", "AKBNK.IS", "AKCNS.IS", "AKFGY.IS", "AKSA.IS", "AKSEN.IS", "ALARK.IS", "ALBRK.IS", "ASGYO.IS", "ASELS.IS", "ASTOR.IS", "AYDEM.IS", "BAGFS.IS", "BERA.IS", "BIMAS.IS", "BIOEN.IS", "BRISA.IS", "BRSAN.IS", "BUCIM.IS", "CANTE.IS", "CCOLA.IS", "CEMTS.IS", "CIMSA.IS", "CWENE.IS", "DOAS.IS", "DOHOL.IS", "ECILC.IS", "EGEEN.IS", "EKGYO.IS", "ENJSA.IS", "ENKAI.IS", "EREGL.IS", "EUREN.IS", "FROTO.IS", "GARAN.IS", "GESAN.IS", "GOLTS.IS", "GOZDE.IS", "GSDHO.IS", "GUBRF.IS", "GWIND.IS", "HALKB.IS", "HEKTS.IS", "IPEKE.IS", "ISCTR.IS", "ISFIN.IS", "ISGYO.IS", "ISMEN.IS", "IZENR.IS", "KARSN.IS", "KCAER.IS", "KCHOL.IS", "KMPUR.IS", "KONTR.IS", "KORDS.IS", "KOZAA.IS", "KOZAL.IS", "KRDMD.IS", "LOGO.IS", "MAVI.IS", "MGROS.IS", "MIATK.IS", "ODAS.IS", "OTKAR.IS", "OYAKC.IS", "PARSN.IS", "PETKM.IS", "PGSUS.IS", "PSGYO.IS", "QUAGR.IS", "SAHOL.IS", "SASA.IS", "SISE.IS", "SMRTG.IS", "SOKM.IS", "TATGD.IS", "TAVHL.IS", "TCELL.IS", "THYAO.IS", "TKFEN.IS", "TOASO.IS", "TSKB.IS", "TTKOM.IS", "TTRAK.IS", "TUKAS.IS", "TUPRS.IS", "ULKER.IS", "VAKBN.IS", "VESBE.IS", "VESTL.IS", "YKBNK.IS", "YYLGD.IS", "ZOREN.IS", "XU100.IS"]
 
-    try:
+    while True:
+        try:
+            df = yf.download(symbols, period="5d", interval="1d", progress=False)
+            if not df.empty:
+                cache = {}
+                close_df = df['Close'].ffill()
 
-        df = yf.download(symbols, period="5d", interval="1d", progress=False)
+                for sym in symbols:
+                    clean_sym = sym.replace(".IS", "")
+                    if clean_sym == "XU100": clean_sym = "BIST100"
 
-        if not df.empty:
-
-            cache = {}
-
-            for sym in symbols:
-
-                clean_sym = sym.replace(".IS", "")
-
-                if clean_sym == "XU100": clean_sym = "BIST100"
-
-                try:
-                    import math
-                    close_today = float(df['Close'][sym].iloc[-1])
-                    
-                    if len(df['Close'][sym]) >= 2:
-                        close_yest = float(df['Close'][sym].iloc[-2])
-                    else:
-                        close_yest = close_today
+                    try:
+                        import math
+                        close_today = float(close_df[sym].iloc[-1])
                         
-                    if math.isnan(close_today): close_today = 0.0
-                    if math.isnan(close_yest) or close_yest == 0:
-                        pct = 0.0
-                    else:
-                        pct = ((close_today - close_yest) / close_yest) * 100
-                        if math.isnan(pct): pct = 0.0
-                    cache[clean_sym] = {"price": close_today, "percent": pct, "rvol": 1.0}
-                except Exception as e:
-                    cache[clean_sym] = {"price": 0.0, "percent": 0.0, "rvol": 1.0}
+                        if len(close_df[sym]) >= 2:
+                            close_yest = float(close_df[sym].iloc[-2])
+                        else:
+                            close_yest = close_today
+                            
+                        if math.isnan(close_today): close_today = 0.0
+                        if math.isnan(close_yest) or close_yest == 0:
+                            pct = 0.0
+                        else:
+                            pct = ((close_today - close_yest) / close_yest) * 100
+                            if math.isnan(pct): pct = 0.0
+                        cache[clean_sym] = {"price": close_today, "percent": pct, "rvol": 1.0}
+                    except Exception as e:
+                        cache[clean_sym] = {"price": 0.0, "percent": 0.0, "rvol": 1.0}
 
             # Read market regime
 
@@ -397,9 +394,10 @@ async def fetch_market_data_bg():
 
             LAST_MARKET_UPDATE = time.time()
 
-    except:
-
-        pass
+        except Exception as e:
+            print("Fetch market data error:", e)
+            
+        await asyncio.sleep(120)
 
 
 
@@ -424,15 +422,6 @@ async def api_data(request):
         return web.json_response({"status": "error", "message": str(e)})
 
 async def api_market(request):
-
-    import time
-
-    if time.time() - LAST_MARKET_UPDATE > 120:
-
-        import asyncio
-
-        asyncio.create_task(fetch_market_data_bg())
-
     return web.json_response(MARKET_CACHE)
 
 
@@ -633,6 +622,7 @@ async def start_mini_app_server():
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
+    asyncio.create_task(fetch_market_data_bg())
     asyncio.create_task(process_signal_queue())
     asyncio.create_task(portfolio_monitor_bg())
     asyncio.create_task(daily_summary_reporter_bg())
