@@ -15,7 +15,7 @@ def get_volatility_allocation(symbol: str) -> float:
     try:
         clean_sym = symbol.replace('BIST:', '') + '.IS'
         df = yf.download(clean_sym, period='1mo', interval='1d', progress=False)
-        if df.empty: return 0.15 # Varsayilan guvenli oran %15
+        if df.empty: return 0.10 # Varsayilan guvenli oran %10
         
         if isinstance(df.columns, pd.MultiIndex):
             close = df['Close'][clean_sym]
@@ -28,14 +28,14 @@ def get_volatility_allocation(symbol: str) -> float:
         daily_range_pct = ((high - low) / close).tail(14).mean()
         
         if daily_range_pct > 0.05: # Gunde %5'ten fazla dalgalaniyor (Cok Riskli)
-            return 0.10 # Sadece %10 para bagla
+            return 0.08 # %8 para bagla
         elif daily_range_pct > 0.03: # Orta riskli
-            return 0.15
+            return 0.10 # %10 para bagla
         else: # Sakin hisse (KCHOL vb.)
-            return 0.25 # %25 para baglanabilir
+            return 0.12 # %12 para baglanabilir
     except Exception as e:
         log_event('ADV_FILTER', f'Volatilite hatasi ({symbol}): {e}')
-        return 0.15
+        return 0.10
 
 def check_rsi_cross_validation(symbol: str) -> tuple[bool, str]:
     # TradingView AL dediginde, RSI 70 uzerindeyse (Asiri Alim) emri reddet!

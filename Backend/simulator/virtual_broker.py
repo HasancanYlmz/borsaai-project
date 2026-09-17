@@ -7,7 +7,7 @@ from core.utils import log_event
 # VIRTUAL BROKER v2.0 (Kurumsal Kasa Yonetimi + Komisyon)
 # --------------------------------------------------------
 
-MAX_ACTIVE_TRADES = 3      # Ayni anda en fazla 3 hissede pozisyon
+MAX_ACTIVE_TRADES = 8      # Ayni anda en fazla 8 hissede pozisyon
 MAX_ALLOCATION_PCT = 0.20  # obsolete, artik volatility allocation var.
 
 def get_dynamic_commission(symbol: str) -> float:
@@ -99,6 +99,9 @@ async def execute_virtual_buy(symbol: str, price: float, ai_reason: str, ai_conf
             action_title = "YENI SANAL ALIM"
             avg_str = ""
 
+        import html
+        safe_ai_reason = html.escape(ai_reason)
+        
         msg = (
             f' <b>{action_title}</b>\n\n'
             f'Hisse: {symbol}\n'
@@ -108,7 +111,7 @@ async def execute_virtual_buy(symbol: str, price: float, ai_reason: str, ai_conf
             f'Komisyon+Kayma (%{dynamic_rate*bool(dynamic_rate)*100:.1f}): {commission_fee:.2f} TL\n'
             f'Kalan Kasa: {new_cash:.2f} TL{avg_str}\n\n'
             f'YZ Onay Skoru: %{ai_confidence}\n'
-            f'YZ Notu: {ai_reason}'
+            f'YZ Notu: {safe_ai_reason}'
         )
         log_event('BROKER', f'{symbol} alindi. Maliyet: {total_cost:.2f} TL')
         await asyncio.to_thread(send_telegram_message, msg)

@@ -279,7 +279,8 @@ async def process_signal_queue():
                     await execute_virtual_buy(symbol, price, reason, float(score))
                 else:
                     from simulator.virtual_broker import send_telegram_message
-                    msg = "⛔ ALIM REDDEDİLDİ\n\nHisse: " + symbol + "\nNeden: " + reason
+                    import html
+                    msg = "⛔ ALIM REDDEDİLDİ\n\nHisse: " + symbol + "\nNeden: " + html.escape(reason)
                     await asyncio.to_thread(send_telegram_message, msg)
                     
             elif action in ["SAT", "SELL"]:
