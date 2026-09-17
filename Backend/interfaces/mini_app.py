@@ -285,6 +285,7 @@ async def process_signal_queue():
             elif action in ["SAT", "SELL"]:
                 await execute_virtual_sell(symbol, price, "TradingView Trailing Stop")
                 
+            await asyncio.sleep(1.5) # Anti-Spam Telegram Delay
             signal_queue.task_done()
         except Exception as e:
             print("Queue processing error:", e)
