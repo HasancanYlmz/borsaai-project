@@ -15,7 +15,7 @@ load_dotenv()
 
 def fetch_turkish_news(symbol):
     try:
-        url = f"https://news.google.com/rss/search?q={symbol}+hisse+kap&hl=tr&gl=TR&ceid=TR:tr"
+        url = f"https://news.google.com/rss/search?q={symbol}+hisse+kap+when:1d&hl=tr&gl=TR&ceid=TR:tr"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=5) as response:
             xml_data = response.read()
@@ -52,13 +52,19 @@ async def analyze_stock_with_gemini(symbol: str) -> dict:
         
         news_text = await asyncio.to_thread(fetch_turkish_news, symbol)
         
-        prompt = f"""Sen Borsa Istanbul'da islem yapan kurumsal bir fon yoneticisisin.
+        import datetime
+        today_date = datetime.datetime.now().strftime("%d %B %Y")
+        
+        prompt = f"""Sen Borsa Istanbul'da islem yapan kurumsal bir fon yoneticisisin. Bugunun tarihi: {today_date}
 TradingView algoritmasi, {symbol} hissesi icin 'Alim' sinyali uretti.
 
-Google News & KAP (Son Haberler):
+Google News & KAP (Son 24 Saat Haberleri):
 {news_text}
 
-Lutfen bu sinyali hizlica degerlendir. Eger sirket hakkinda cok olumsuz bir haber varsa REJECT et. Eger notr veya olumluysa APPROVE et.
+DIKKAT: 16 Eylul'de (dun) piyasada genel bir cokus ve binlerce hissede 'devre kesici' yasandi. Bugun piyasa yukseliste. 
+Eger haberlerde sadece dunku 'devre kesici yedi', 'taban oldu', 'ikincil halka arz oncesi durduruldu' gibi piyasa geneli panik haberleri gorursen bunlari KESINLIKLE GORMEZDEN GEL ve APPROVE ver.
+Sadece sirkete ozel, KALICI ve BUGUNE AIT taze bir felaket/krizi (iflas, dava) varsa REJECT et.
+
 Bana yalnizca su formatta yanit ver:
 KARAR: APPROVE veya REJECT
 GUVEN: 0-100 arasi bir sayi
