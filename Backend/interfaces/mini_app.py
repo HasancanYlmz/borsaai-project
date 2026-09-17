@@ -226,8 +226,8 @@ async def process_signal_queue():
             if action in ["AL", "BUY"]:
                 # --- Gun Sonu ve Seans Filtresi ---
                 now = time.localtime()
-                if now.tm_hour >= 17 and now.tm_min >= 30:
-                    # Saat 17:30 sonrasi sinyalleri yoksay
+                if now.tm_hour >= 17 and now.tm_min >= 55:
+                    # Saat 17:55 sonrasi sinyalleri yoksay
                     signal_queue.task_done()
                     continue
                 
